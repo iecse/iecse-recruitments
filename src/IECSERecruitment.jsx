@@ -328,28 +328,28 @@ function OrbitalGlobe() {
     // Outer Ring (Larger Diameter, Upper Front)
     const ring1 = makeRing({
       radius: isMobile ? 3.0 : 3.65,
-      fontHeight: isMobile ? 0.52 : 0.64,
+      fontHeight: isMobile ? 0.60 : 0.64,
       arcDeg: 145,
       yOffset: isMobile ? 0.22 : 0.32,
       text: "IECSE MANAGEMENT COMMITTEE",
       tracking: 14,
       colorA: "#2FD0E8",
       colorB: "#5B8AFF",
-      spin: 0.0016,
+      spin: isMobile ? 0.0024 : 0.0016,
       dotColor: 0xbfe8ff,
     });
 
     // Inner Ring (Smaller Diameter, Lower Front)
     const ring2 = makeRing({
       radius: isMobile ? 2.3 : 2.80,
-      fontHeight: isMobile ? 0.46 : 0.56,
+      fontHeight: isMobile ? 0.54 : 0.56,
       arcDeg: 115,
       yOffset: isMobile ? -0.30 : -0.42,
       text: "RECRUITMENTS 2026",
       tracking: 16,
       colorA: "#FF57D8",
       colorB: "#8A6BFF",
-      spin: -0.0016,
+      spin: isMobile ? -0.0024 : -0.0016,
       dotColor: 0xd9c9ff,
     });
 
