@@ -237,12 +237,13 @@ function OrbitalGlobe() {
 
     const globeGeo = new THREE.IcosahedronGeometry(1.9, 2);
     const globeMat = new THREE.MeshStandardMaterial({
-      color: 0x2c3ad0,
+      //color: 0x2c3ad0,
+      color: 0x7185FF,
       flatShading: true,
       roughness: 0.32,
       metalness: 0.55,
       emissive: new THREE.Color(0x160f3d),
-      emissiveIntensity: 0.45,
+      emissiveIntensity: 0.15,
     });
     const globe = new THREE.Mesh(globeGeo, globeMat);
     assembly.add(globe);
@@ -257,8 +258,8 @@ function OrbitalGlobe() {
     glowCanvas.height = 256;
     const gctx = glowCanvas.getContext("2d");
     const grad = gctx.createRadialGradient(128, 128, 0, 128, 128, 128);
-    grad.addColorStop(0, "rgba(138,107,255,0.45)");
-    grad.addColorStop(0.5, "rgba(47,208,232,0.12)");
+    grad.addColorStop(0, "rgba(138,107,255,0.55)");
+    grad.addColorStop(0.5, "rgba(47,208,232,0.15)");
     grad.addColorStop(1, "rgba(0,0,0,0)");
     gctx.fillStyle = grad;
     gctx.fillRect(0, 0, 256, 256);
