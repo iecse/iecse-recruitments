@@ -17,6 +17,7 @@ import {
   Code2,
   Lock,
 } from "lucide-react";
+import { supabase } from "./supabase";
 
 /* ---------------------------------------------------------
    IECSE — Working Committee Recruitments 2026
@@ -717,18 +718,61 @@ export default function IECSERecruitment() {
 
   const update = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const required = ["fullName", "year", "registrationNumber", "branch", "domain", "learnerEmail", "phoneNumber", "whyJoin"];
+
+    const required = [
+      "fullName",
+      "year",
+      "registrationNumber",
+      "branch",
+      "domain",
+      "learnerEmail",
+      "phoneNumber",
+      "whyJoin",
+    ];
+
     const missing = required.some((k) => !String(form[k]).trim());
+
     if (missing) {
       setError("Please fill in every field before submitting.");
       return;
     }
+
+    if (!/^25\d+$/.test(form.registrationNumber)) {
+      setError("Invalid registration number.");
+      return;
+    }
+
     setError("");
-    // TODO: swap this for a Supabase insert into `applications`
-    // (full_name, year, registration_number, branch, domain,
-    //  learner_email, phone_number, why_join) once the backend is wired up.
+
+    const { error } = await supabase
+      .from("applications")
+      .insert([
+        {
+          full_name: form.fullName,
+          year: form.year,
+          registration_number: form.registrationNumber,
+          branch: form.branch,
+          domain: form.domain,
+          learner_email: form.learnerEmail,
+          phone_number: form.phoneNumber,
+          why_join: form.whyJoin,
+        },
+      ]);
+
+    if (error) {
+      console.error("Supabase insert error:", error);
+
+      if (error.code === "23505") {
+        setError("You have already submitted an application.");
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
+
+      return;
+    }
+
     setSubmitted(true);
   };
 
@@ -945,7 +989,7 @@ export default function IECSERecruitment() {
               </h3>
               <p className="text-sm sm:text-base mb-8" style={{ color: COLORS.muted, fontFamily: "'Inter', sans-serif" }}>
                 Thanks, {form.fullName.split(" ")[0] || "there"} — we've logged your details for the {form.domain || "selected"} domain.
-                Keep an eye on your inbox.
+                We'll get back to you with further updates.
               </p>
               <button
                 onClick={() => {
