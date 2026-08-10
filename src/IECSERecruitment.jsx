@@ -40,17 +40,16 @@ const COLORS = {
 };
 
 const DOMAINS = [
+  "Coding",
   "Web Development",
-  "App Development",
-  "AI / Machine Learning",
-  "UI / UX Design",
-  "Cybersecurity",
-  "Finance & Growth",
-  "Content & Media",
-  "Operations & Management",
+  "Machine Learning",
+  "HashTag",
+  "Comp Team (Autonomous)",
+  "SMGD",
+  "Design"
 ];
 
-const YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
+const YEARS = ["2nd Year"];
 
 /* ================= 3D helpers ================= */
 
@@ -342,7 +341,7 @@ function OrbitalGlobe() {
     // Inner Ring (Smaller Diameter, Lower Front)
     const ring2 = makeRing({
       radius: isMobile ? 2.6 : 2.80,
-      fontHeight: isMobile ? 0.56 : 0.6,
+      fontHeight: isMobile ? 0.58 : 0.6,
       arcDeg: 115,
       yOffset: isMobile ? -0.40 : -0.52,
       text: "RECRUITMENTS 2026",
