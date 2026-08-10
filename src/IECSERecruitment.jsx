@@ -744,6 +744,11 @@ export default function IECSERecruitment() {
       return;
     }
 
+    if (!/^\d{10}$/.test(form.phoneNumber)) {
+      setError("Phone number should contain 10 digits.");
+      return;
+    }
+
     setError("");
 
     const { error } = await supabase
@@ -991,25 +996,6 @@ export default function IECSERecruitment() {
                 Thanks, {form.fullName.split(" ")[0] || "there"} — we've logged your details for the {form.domain || "selected"} domain.
                 We'll get back to you with further updates.
               </p>
-              <button
-                onClick={() => {
-                  setSubmitted(false);
-                  setForm({
-                    fullName: "",
-                    year: "",
-                    registrationNumber: "",
-                    branch: "",
-                    domain: "",
-                    learnerEmail: "",
-                    phoneNumber: "",
-                    whyJoin: "",
-                  });
-                }}
-                className="text-sm font-medium underline underline-offset-4"
-                style={{ color: COLORS.cyan, fontFamily: "'Inter', sans-serif" }}
-              >
-                Submit another response
-              </button>
             </div>
           )}
         </div>
