@@ -368,10 +368,7 @@ function OrbitalGlobe() {
       targetRot.y = pointer.x * 0.4;
       targetRot.x = -pointer.y * 0.26;
     }
-    if (!isMobile) {
-      window.addEventListener("mousemove", onPointerMove);
-    }
-    //window.addEventListener("mousemove", onPointerMove);
+    window.addEventListener("mousemove", onPointerMove);
     //window.addEventListener("touchmove", onPointerMove, { passive: true });
 
     function onResize() {
@@ -413,11 +410,8 @@ function OrbitalGlobe() {
 
     return () => {
       cancelAnimationFrame(raf);
-      if (!isMobile) {
-        window.removeEventListener("mousemove", onPointerMove);
-      }
-      //window.removeEventListener("mousemove", onPointerMove);
-      //window.removeEventListener("touchmove", onPointerMove);
+      window.removeEventListener("mousemove", onPointerMove);
+      window.removeEventListener("touchmove", onPointerMove);
       ro.disconnect();
       mount.removeChild(renderer.domElement);
       scene.traverse((obj) => {
