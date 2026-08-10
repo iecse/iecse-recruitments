@@ -327,10 +327,10 @@ function OrbitalGlobe() {
 
     // Outer Ring (Larger Diameter, Upper Front)
     const ring1 = makeRing({
-      radius: isMobile ? 3.0 : 3.65,
-      fontHeight: isMobile ? 0.60 : 0.64,
+      radius: isMobile ? 3.3 : 3.65,
+      fontHeight: isMobile ? 0.64 : 0.7,
       arcDeg: 145,
-      yOffset: isMobile ? 0.22 : 0.32,
+      yOffset: isMobile ? 0.32 : 0.42,
       text: "IECSE MANAGEMENT COMMITTEE",
       tracking: 14,
       colorA: "#2FD0E8",
@@ -341,10 +341,10 @@ function OrbitalGlobe() {
 
     // Inner Ring (Smaller Diameter, Lower Front)
     const ring2 = makeRing({
-      radius: isMobile ? 2.3 : 2.80,
-      fontHeight: isMobile ? 0.54 : 0.56,
+      radius: isMobile ? 2.6 : 2.80,
+      fontHeight: isMobile ? 0.56 : 0.6,
       arcDeg: 115,
-      yOffset: isMobile ? -0.30 : -0.42,
+      yOffset: isMobile ? -0.40 : -0.52,
       text: "RECRUITMENTS 2026",
       tracking: 16,
       colorA: "#FF57D8",
