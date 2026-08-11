@@ -290,7 +290,7 @@ function OrbitalGlobe() {
     }
 
     const ring1 = makeRing({
-      radius: isMobile ? 3.3 : 3.25,
+      radius: isMobile ? 3.3 : 3.45,
       fontHeight: isMobile ? 0.64 : 0.7,
       arcDeg: 145,
       yOffset: isMobile ? 0.32 : 0.42,
@@ -321,7 +321,6 @@ function OrbitalGlobe() {
     let raf = null;
 
     function onPointerMove(e) {
-      if(isMobile) return;
       const rect = mount.getBoundingClientRect();
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
