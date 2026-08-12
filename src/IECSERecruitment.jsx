@@ -24,8 +24,13 @@ import {
   Briefcase,
   Globe,
   Award,
+  QrCode,
+  Info,
+  ExternalLink,
 } from "lucide-react";
 import { supabase } from "./supabase";
+import qr1Asset from "./assets/qr1.jpg";
+import qr2Asset from "./assets/qr2.jpg";
 
 const GithubIcon = ({ size = 18, ...props }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -662,7 +667,17 @@ function Feature({ icon: Icon, title, desc, color }) {
   );
 }
 
-const MEMBERSHIP_FEE = 350;
+const MEMBERSHIP_FEE = 250;
+
+// Official IECSE payment QR images and UPI IDs
+const PAYMENT_QR_1 = qr1Asset;
+const PAYMENT_QR_2 = qr2Asset;
+
+const UPI_ID_1 = "kushalraj198211-1@oksbi";
+const UPI_ID_2 = "kushalraj198211-1@okicici";
+
+// Official WhatsApp Members Group Link
+const WHATSAPP_GROUP_LINK = "https://chat.whatsapp.com/In7zQ55T1BlB7PyR9O1JaS?s=sh&p=a&ilr=0";
 
 const YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
 
@@ -702,6 +717,7 @@ const DEFAULT_FORM = {
   tier: "", // 'member' | 'workcomm' | 'mancomm'
   paymentStatus: "pending",
   paymentId: "",
+  paymentConfirmed: false,
   interviewStatus: "pending",
 };
 
@@ -814,6 +830,16 @@ export default function IECSERecruitment() {
     return "";
   };
 
+  const validateStep5 = () => {
+    if (!form.paymentId || !form.paymentId.trim()) {
+      return "Please enter your payment Transaction ID / UTR.";
+    }
+    if (!form.paymentConfirmed) {
+      return "Please confirm that you have completed the payment.";
+    }
+    return "";
+  };
+
   const handleNext = () => {
     let err = "";
     if (step === 1) err = validateStep1();
@@ -849,6 +875,8 @@ export default function IECSERecruitment() {
     if (step3Err) { setStep(3); setError(step3Err); return; }
     const step4Err = validateStep4();
     if (step4Err) { setStep(4); setError(step4Err); return; }
+    const step5Err = validateStep5();
+    if (step5Err) { setStep(5); setError(step5Err); return; }
 
     setSubmitting(true);
 
@@ -1558,7 +1586,7 @@ export default function IECSERecruitment() {
                             IECSE Membership
                           </p>
                           <p className="text-xs text-slate-400" style={{ fontFamily: "'Inter', sans-serif" }}>
-                            Tier: <span className="uppercase font-mono text-cyan-300 font-semibold">{form.tier}</span>
+                            Tier: <span className="uppercase font-mono text-cyan-300 font-semibold">{form.tier || "Member"}</span>
                           </p>
                         </div>
                       </div>
@@ -1580,11 +1608,127 @@ export default function IECSERecruitment() {
                     </div>
                   </div>
 
-                  <div className="rounded-xl p-4 border bg-cyan-950/20 border-cyan-500/20 text-xs text-cyan-200 flex items-start gap-2.5">
-                    <ShieldCheck size={18} className="shrink-0 mt-0.5" style={{ color: COLORS.cyan }} />
-                    <p style={{ fontFamily: "'Inter', sans-serif" }}>
-                      Your payment status will be initialized as <span className="font-mono font-bold text-amber-300">pending</span> and will be confirmed once payment gateway integration completes.
+                  {/* MANUAL UPI PAYMENT SECTION */}
+                  <div
+                    className="rounded-xl p-5 border space-y-5"
+                    style={{ background: "rgba(255, 255, 255, 0.02)", borderColor: "rgba(255, 255, 255, 0.08)" }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <QrCode size={18} style={{ color: COLORS.cyan }} />
+                      <h3 className="text-sm font-semibold tracking-wide" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                        Manual UPI Payment
+                      </h3>
+                    </div>
+
+                    {/* TWO QR CODES */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* QR CODE 1 */}
+                      <div
+                        className="flex flex-col items-center justify-center p-4 rounded-lg border text-center space-y-3"
+                        style={{ background: "rgba(10, 8, 18, 0.6)", borderColor: "rgba(255, 255, 255, 0.1)" }}
+                      >
+                        <p className="text-xs font-semibold tracking-wider text-slate-300 uppercase" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                          Scan QR Code 1
+                        </p>
+                        <div className="w-44 h-44 rounded-lg border p-2 bg-white flex items-center justify-center overflow-hidden shadow-lg">
+                          {PAYMENT_QR_1 ? (
+                            <img src={PAYMENT_QR_1} alt="Scan QR Code 1" className="w-full h-full object-contain" />
+                          ) : (
+                            <div className="w-full h-full bg-slate-900 rounded flex flex-col items-center justify-center p-3 text-center text-slate-400 space-y-2">
+                              <QrCode size={40} className="text-cyan-400 opacity-80" />
+                              <span className="text-[11px] leading-tight font-mono text-slate-300">
+                                [QR CODE 1]
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        {UPI_ID_1 && (
+                          <p className="text-[11px] font-mono text-cyan-300 bg-cyan-950/40 px-2 py-1 rounded border border-cyan-500/20">
+                            UPI ID: {UPI_ID_1}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* QR CODE 2 */}
+                      <div
+                        className="flex flex-col items-center justify-center p-4 rounded-lg border text-center space-y-3"
+                        style={{ background: "rgba(10, 8, 18, 0.6)", borderColor: "rgba(255, 255, 255, 0.1)" }}
+                      >
+                        <p className="text-xs font-semibold tracking-wider text-slate-300 uppercase" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                          Scan QR Code 2
+                        </p>
+                        <div className="w-44 h-44 rounded-lg border p-2 bg-white flex items-center justify-center overflow-hidden shadow-lg">
+                          {PAYMENT_QR_2 ? (
+                            <img src={PAYMENT_QR_2} alt="Scan QR Code 2" className="w-full h-full object-contain" />
+                          ) : (
+                            <div className="w-full h-full bg-slate-900 rounded flex flex-col items-center justify-center p-3 text-center text-slate-400 space-y-2">
+                              <QrCode size={40} className="text-violet-400 opacity-80" />
+                              <span className="text-[11px] leading-tight font-mono text-slate-300">
+                                [QR CODE 2]
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        {UPI_ID_2 && (
+                          <p className="text-[11px] font-mono text-cyan-300 bg-cyan-950/40 px-2 py-1 rounded border border-cyan-500/20">
+                            UPI ID: {UPI_ID_2}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Note below QR codes */}
+                    <p className="text-xs leading-relaxed text-slate-300 text-center sm:text-left pt-1" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      Use either QR code to complete the payment. If payment through one QR code doesn't work, please try the other one.
                     </p>
+
+                    <div className="p-3 rounded-lg border bg-violet-950/20 border-violet-500/20 text-xs text-violet-200 flex items-center gap-2">
+                      <Info size={16} className="shrink-0 text-violet-400" />
+                      <p style={{ fontFamily: "'Inter', sans-serif" }}>
+                        After completing the payment, enter your transaction details below.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* TRANSACTION ID / UTR INPUT */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-semibold tracking-wider text-slate-300 uppercase" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                      Transaction ID / UTR <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={form.paymentId}
+                      onChange={update("paymentId")}
+                      placeholder="Enter your payment transaction ID / UTR"
+                      className="w-full px-4 py-3 rounded-lg border text-sm transition-all duration-200 focus:outline-none focus:border-cyan-400"
+                      style={{
+                        background: "rgba(255, 255, 255, 0.03)",
+                        borderColor: "rgba(255, 255, 255, 0.15)",
+                        color: COLORS.text,
+                        fontFamily: "'Inter', sans-serif",
+                      }}
+                    />
+                  </div>
+
+                  {/* PAYMENT CONFIRMATION CHECKBOX */}
+                  <div className="flex items-center gap-3 pt-1">
+                    <input
+                      type="checkbox"
+                      id="paymentConfirmed"
+                      checked={!!form.paymentConfirmed}
+                      onChange={(e) => {
+                        setForm((f) => ({ ...f, paymentConfirmed: e.target.checked }));
+                        if (error) setError("");
+                      }}
+                      className="w-4 h-4 rounded border-slate-700 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0 cursor-pointer accent-cyan-400"
+                    />
+                    <label
+                      htmlFor="paymentConfirmed"
+                      className="text-xs sm:text-sm font-medium text-slate-200 cursor-pointer select-none"
+                      style={{ fontFamily: "'Inter', sans-serif" }}
+                    >
+                      I have completed the payment
+                    </label>
                   </div>
 
                   {error && (
@@ -1648,43 +1792,57 @@ export default function IECSERecruitment() {
 
               <div>
                 <h3 className="text-2xl sm:text-3xl font-semibold mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                  Application Complete
+                  Application Submitted
                 </h3>
 
-                {form.tier === "member" && (
-                  <p className="text-sm sm:text-base leading-relaxed text-slate-300 max-w-lg mx-auto" style={{ fontFamily: "'Inter', sans-serif" }}>
-                    Welcome to IECSE! Your membership has been successfully registered.
+                <p className="text-sm sm:text-base leading-relaxed text-slate-300 max-w-lg mx-auto mb-3" style={{ fontFamily: "'Inter', sans-serif" }}>
+                  Your application has been submitted successfully. Your payment will be verified by the IECSE team.
+                </p>
+
+                {/* {form.tier === "member" && (
+                  <p className="text-xs sm:text-sm text-cyan-300/90 max-w-lg mx-auto mb-6" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    Once your payment is verified, you will receive access to the Member group.
                   </p>
-                )}
+                )} */}
 
                 {form.tier === "workcomm" && (
-                  <p className="text-sm sm:text-base leading-relaxed text-slate-300 max-w-lg mx-auto" style={{ fontFamily: "'Inter', sans-serif" }}>
-                    You're officially an IECSE Member. Your WorkComm application has been submitted for the interview process.
+                  <p className="text-xs sm:text-sm text-cyan-300/90 max-w-lg mx-auto mb-6" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    Your membership payment will be verified, and your WorkComm application will proceed to the interview process.
                   </p>
                 )}
 
                 {form.tier === "mancomm" && (
-                  <p className="text-sm sm:text-base leading-relaxed text-slate-300 max-w-lg mx-auto" style={{ fontFamily: "'Inter', sans-serif" }}>
-                    You're officially an IECSE Member. Your ManComm application has been submitted for the interview process.
+                  <p className="text-xs sm:text-sm text-cyan-300/90 max-w-lg mx-auto mb-6" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    Your membership payment will be verified, and your ManComm application will proceed to the interview process.
                   </p>
                 )}
-              </div>
 
-              <div className="pt-4">
-                <a
-                  href="https://iecsemanipal.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-lg text-sm font-semibold tracking-wide transition-all duration-200 hover:scale-105"
-                  style={{
-                    fontFamily: "'IBM Plex Mono', monospace",
-                    letterSpacing: "0.08em",
-                    background: `linear-gradient(90deg, ${COLORS.violetDeep}, ${COLORS.cyan})`,
-                    color: "#0A0812",
-                  }}
-                >
-                  JOIN MEMBER GROUP <ExternalLink size={15} strokeWidth={2.5} />
-                </a>
+                {/* WHATSAPP MEMBERS GROUP SECTION */}
+                <div className="pt-6 border-t border-white/10 max-w-md mx-auto space-y-3">
+                  <h4 className="text-base sm:text-lg font-semibold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    Join the IECSE Members WhatsApp Group
+                  </h4>
+                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    Since you have registered for IECSE membership, join the Members WhatsApp group using the button below.
+                  </p>
+                  <div className="pt-2">
+                    <a
+                      href={WHATSAPP_GROUP_LINK}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onContextMenu={(e) => e.preventDefault()}
+                      className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-lg text-sm font-semibold tracking-wide transition-all duration-200 hover:scale-105"
+                      style={{
+                        fontFamily: "'IBM Plex Mono', monospace",
+                        letterSpacing: "0.08em",
+                        background: `linear-gradient(90deg, ${COLORS.violetDeep}, ${COLORS.cyan})`,
+                        color: "#0A0812",
+                      }}
+                    >
+                      JOIN MEMBERS GROUP <ExternalLink size={15} strokeWidth={2.5} />
+                    </a>
+                  </div>
+                </div>
               </div>
             </div>
           )}
