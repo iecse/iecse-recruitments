@@ -1,0 +1,218 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   IECSE recruitment design tokens.
+   Brand values come from iecsemanipal-v2-prod (NavBar.tsx, GradientText.tsx,
+   index.css). The page runs one locked dark theme; the dither backdrop sits
+   behind everything and the surfaces are translucent neutrals on top of it.
+--------------------------------------------------------------------------- */
+
+@theme {
+  /* Ground and surfaces */
+  --color-ink: #050505;
+  --color-ink-deep: #030308;
+  --color-surface: rgba(255, 255, 255, 0.045);
+  --color-surface-strong: rgba(255, 255, 255, 0.07);
+  /* The working panel is a solid slab, not frosted glass. Blur over a shader
+     is one of the clearest generated-site tells, and it costs a repaint. */
+  --color-panel: #0a0910;
+  --color-line: rgba(255, 255, 255, 0.16);
+  --color-line-strong: rgba(255, 255, 255, 0.34);
+
+  /* Type */
+  --color-paper: #f7f7fa;
+  --color-muted: #c4c4c4;
+  --color-faint: #8b8a99;
+
+  /* Brand accent. Cyan to violet is treated as a single accent identity. */
+  --color-cyan: #23c8d3;
+  --color-violet: #886ed2;
+  --color-deep: #1f44a6;
+
+  /* States */
+  --color-alert: #f2726f;
+
+  /* Three roles, not three decorations. Unbounded carries voice, Archivo
+     carries reading, JetBrains Mono marks anything that is data. */
+  --font-display: "Unbounded", "Archivo", sans-serif;
+  --font-body: "Archivo", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  /* One line on the page gets to shout. Anton is condensed and heavy, the
+     opposite axis to Unbounded, so the two never read as the same voice. */
+  --font-statement: "Anton", "Unbounded", sans-serif;
+
+  /* One radius scale for the whole page */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+
+  /* One easing vocabulary. Deliberately no overshoot: bounce and elastic
+     easing are a generated-UI signature. */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Layer scale, documented so nothing invents its own number.
+   0 backdrop | 10 vignette | 20 page content | 30 sticky rail | 40 mobile bar */
+
+html {
+  background: var(--color-ink);
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: rgba(136, 110, 210, 0.4);
+  color: #fff;
+}
+
+/* Native controls need explicit dark styling or they render white popups */
+select option {
+  background: #10101a;
+  color: var(--color-paper);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #6f6e7d;
+}
+
+input[type="checkbox"] {
+  accent-color: var(--color-cyan);
+}
+
+/* Focus: one visible ring everywhere, never removed */
+:focus-visible {
+  outline: 2px solid var(--color-cyan);
+  outline-offset: 2px;
+}
+
+/* Autofill in Chrome repaints inputs white. Force the dark surface back. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--color-paper);
+  -webkit-box-shadow: 0 0 0 1000px #14141f inset;
+  caret-color: var(--color-paper);
+}
+
+@keyframes field-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes step-in-forward {
+  from {
+    opacity: 0;
+    transform: translate3d(24px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes step-in-back {
+  from {
+    opacity: 0;
+    transform: translate3d(-24px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes saved-pulse {
+  0% {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  15%,
+  70% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rise-in {
+    animation: rise-in 620ms var(--ease-out-soft) both;
+  }
+  .field-in {
+    animation: field-in 900ms ease-out both;
+  }
+  .step-forward {
+    animation: step-in-forward 380ms var(--ease-out-soft) both;
+  }
+  .step-back {
+    animation: step-in-back 380ms var(--ease-out-soft) both;
+  }
+  .saved-flash {
+    animation: saved-pulse 2.4s ease-out both;
+  }
+}
+
+/* Reduced motion collapses every entrance to an instant, readable state. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Scrollbar: visible but quiet. The main site hides it entirely, which is the
+   wrong call on a form this long. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+  background-clip: content-box;
+}
