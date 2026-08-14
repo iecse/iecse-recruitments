@@ -306,8 +306,11 @@ export default function RecruitmentPage() {
 
   return (
     <div className="relative min-h-[100dvh]">
-      {/* Field: full bleed, fixed, behind everything. */}
-      <div className="fixed inset-0 z-0 hidden lg:block">
+      {/* Field: full bleed, fixed, behind everything, at every width. Backdrop
+          decides internally whether that is the shader (desktop) or the static
+          gradient (phones, reduced motion, no WebGL). The gradient costs no
+          bytes, so there is no reason for a phone to get a flat black page. */}
+      <div className="fixed inset-0 z-0">
         <Backdrop progress={progress} seed={sealSeed} />
       </div>
 
@@ -318,11 +321,7 @@ export default function RecruitmentPage() {
           </div>
         )}
 
-        <div className="relative h-[132px] w-full overflow-hidden lg:hidden">
-          <Backdrop progress={progress} seed={sealSeed} allowShader={false} />
-        </div>
-
-        <div className="mx-auto grid w-full max-w-[1240px] grid-cols-1 gap-8 px-5 pb-24 pt-8 sm:px-8 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-10 lg:px-10 lg:py-16">
+        <div className="mx-auto grid w-full max-w-[1240px] grid-cols-1 gap-8 px-5 pb-24 pt-28 sm:px-8 sm:pt-20 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-10 lg:px-10 lg:py-16">
           {/* One sheet. Header and form share a single surface so the page has
               a spine instead of two islands floating on wallpaper. */}
           <div className="rounded-lg border border-line bg-ink/95 px-6 py-9 sm:px-10 sm:py-12 lg:px-14 lg:py-14">

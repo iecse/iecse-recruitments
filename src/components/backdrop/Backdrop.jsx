@@ -1,4 +1,5 @@
 import { Suspense, lazy, useState } from "react";
+import StaticDither from "./StaticDither";
 import { useCoarsePointer, useMediaQuery, useReducedMotion } from "../../lib/hooks";
 
 /**
@@ -36,13 +37,12 @@ function hasWebGL() {
   }
 }
 
-function StaticField() {
+function StaticField({ seed }) {
   return (
-    <div
-      aria-hidden="true"
-      className="absolute inset-0"
-      style={{ background: STATIC_FIELD }}
-    />
+    <div aria-hidden="true" className="absolute inset-0">
+      <div className="absolute inset-0" style={{ background: STATIC_FIELD }} />
+      <StaticDither seed={seed} />
+    </div>
   );
 }
 
@@ -68,7 +68,7 @@ export default function Backdrop({ progress, seed = "iecse", allowShader = true 
       className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
     >
       {showShader ? (
-        <Suspense fallback={<StaticField />}>
+        <Suspense fallback={<StaticField seed={seed} />}>
           <div className="field-in absolute inset-0">
           <DitherBackdrop
             progress={progress}
@@ -80,7 +80,7 @@ export default function Backdrop({ progress, seed = "iecse", allowShader = true 
           </div>
         </Suspense>
       ) : (
-        <StaticField />
+        <StaticField seed={seed} />
       )}
 
       {/* The field owns this pane, so the only treatment is a feather where it
