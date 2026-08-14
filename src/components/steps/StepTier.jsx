@@ -1,4 +1,4 @@
-import { TIERS } from "../../lib/constants";
+import { tiersForYear } from "../../lib/constants";
 import { AlertIcon, Check } from "../ui/icons";
 
 /**
@@ -8,17 +8,22 @@ import { AlertIcon, Check } from "../ui/icons";
  */
 export default function StepTier({ form, errors, update }) {
   const selected = form.tier;
+  const tiers = tiersForYear(form.year);
 
   return (
     <fieldset className="flex flex-col gap-4">
       <legend className="sr-only">Choose a tier</legend>
 
       <p className="text-[13px] leading-relaxed text-faint">
-        Same fee for every tier. The difference is what you take on.
+        {form.year
+          ? `These are the options open to ${form.year.toLowerCase()} applicants.`
+          : "The difference is what you take on."}{" "}
+        Member is the only one that pays while applying; the committee tiers are
+        interview based and pay on selection.
       </p>
 
       <div className="flex flex-col gap-3">
-        {TIERS.map((tier) => {
+        {tiers.map((tier) => {
           const active = selected === tier.value;
           return (
             <label

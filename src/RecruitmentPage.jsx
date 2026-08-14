@@ -17,6 +17,7 @@ import {
   MEMBERSHIP_FEE,
   STEPS,
   STORAGE_KEY,
+  isTierAllowed,
   stepsForTier,
   toApplicationPayload,
 } from "./lib/constants";
@@ -101,7 +102,13 @@ export default function RecruitmentPage() {
     (key) => (event) => {
       const value =
         event && event.target ? event.target.value : event;
-      setForm((current) => ({ ...current, [key]: value }));
+      setForm((current) => {
+        const next = { ...current, [key]: value };
+        // Changing year can invalidate an already chosen tier. Leaving it set
+        // would submit a combination the club does not allow.
+        if (key === "year" && !isTierAllowed(next.tier, value)) next.tier = "";
+        return next;
+      });
       if (key === "registrationNumber") setDuplicate(false);
       setErrors((current) => {
         if (!current[key]) return current;

@@ -4,7 +4,7 @@
  * announced through aria-describedby.
  */
 
-import { paysOnApplication } from "./constants";
+import { isTierAllowed, paysOnApplication } from "./constants";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const URL_LIKE = /^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/.*)?$/i;
@@ -84,7 +84,17 @@ function validateEvidence(form) {
 
 function validateTier(form) {
   const errors = {};
-  if (!form.tier) errors.tier = "Choose how involved you want to be.";
+
+  if (!form.tier) {
+    errors.tier = "Choose how involved you want to be.";
+    return errors;
+  }
+
+  // Catches a restored draft, or a year changed after a tier was picked.
+  if (!isTierAllowed(form.tier, form.year)) {
+    errors.tier = "That option is not open to your year. Pick another.";
+  }
+
   return errors;
 }
 

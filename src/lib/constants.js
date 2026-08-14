@@ -100,6 +100,31 @@ export const TIERS = [
   },
 ];
 
+/**
+ * Tier eligibility by year. First years can stand for Working Committee,
+ * second years for Management Committee. Member is open to both.
+ *
+ * Year is collected on step 1 and tier on step 4, so this is always known by
+ * the time it is needed. The fallback of "everything" only applies to a draft
+ * saved before a year was chosen.
+ */
+export const TIERS_BY_YEAR = {
+  "1st Year": ["member", "workcomm"],
+  "2nd Year": ["member", "mancomm"],
+};
+
+/** The tier objects a given year may choose from, in canonical order. */
+export function tiersForYear(year) {
+  const allowed = TIERS_BY_YEAR[year];
+  return allowed ? TIERS.filter((tier) => allowed.includes(tier.value)) : TIERS;
+}
+
+export function isTierAllowed(tier, year) {
+  if (!tier) return false;
+  const allowed = TIERS_BY_YEAR[year];
+  return allowed ? allowed.includes(tier) : true;
+}
+
 export const STORAGE_KEY = "iecse_recruitment_draft";
 
 export const DEFAULT_FORM = {
