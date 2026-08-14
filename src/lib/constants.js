@@ -64,6 +64,13 @@ export function stepsForTier(tier) {
   );
 }
 
+/*
+ * Each tier describes itself. Nothing here may reference another committee
+ * tier by name: which tiers are on screen depends on the applicant's year, so
+ * "everything in Working Committee" is meaningless to a second year who is
+ * never shown it. Member is the only tier both years see, so it is the only
+ * one safe to build on.
+ */
 export const TIERS = [
   {
     value: "member",
@@ -71,7 +78,7 @@ export const TIERS = [
     commitment: "No interview",
     summary: "Access to every session, workshop, and internal event we run.",
     points: [
-      "Attend all workshops and talks",
+      "Every workshop, talk and internal event",
       "Members only resources and recordings",
       "Join project teams when they open up",
     ],
@@ -82,7 +89,7 @@ export const TIERS = [
     commitment: "Interview required",
     summary: "You ship the work. Projects, events, and the technical output.",
     points: [
-      "Everything in Member",
+      "Everything a member gets",
       "Own deliverables on club projects",
       "Run sessions inside your domain",
     ],
@@ -93,9 +100,9 @@ export const TIERS = [
     commitment: "Interview required",
     summary: "You run the club. Direction, budget, and the people side.",
     points: [
-      "Everything in Working Committee",
-      "Set direction for a domain",
-      "Lead recruitment and partnerships",
+      "Everything a member gets",
+      "Set direction for a domain and its projects",
+      "Lead recruitment, partnerships and the budget",
     ],
   },
 ];
