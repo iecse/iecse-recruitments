@@ -31,8 +31,13 @@ const FROM = [0.11, 0.26, 0.68];
 const TO = [0.13, 0.69, 0.78];
 const LEVELS = 4;
 
-/** Pixel size of one dither cell on screen. */
-const CELL = 6;
+/**
+ * Pixel size of one dither cell on screen. Matched to the shader's resting
+ * coarse grid (quality.coarse = 16) rather than picked by eye: a finer grid
+ * reads as noise, and the spacing is most of what makes the field feel like
+ * the desktop one.
+ */
+const CELL = 15;
 
 function drawField(canvas, seed, cssWidth, cssHeight) {
   const width = Math.max(1, Math.ceil(cssWidth / CELL));
@@ -72,7 +77,9 @@ function drawField(canvas, seed, cssWidth, cssHeight) {
 
       /* A soft diagonal wash so the frame is not empty where the mark is not. */
       const wash = 1 - Math.min(1, Math.hypot(u - 0.25, v - 0.15) * 1.15);
-      value += Math.max(0, wash) * 0.58 + 0.14;
+      // Ambient matched to the shader floor (0.06). Brighter than that and the
+      // field stops reading as deep water with a mark in it.
+      value += Math.max(0, wash) * 0.44 + 0.07;
 
       /* Bayer threshold, then quantise: this is what makes it read as dither. */
       const threshold = BAYER[(y % 8) * 8 + (x % 8)] - 0.5;
