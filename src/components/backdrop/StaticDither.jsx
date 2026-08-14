@@ -26,18 +26,36 @@ const BAYER = [
   41, 25, 37, 21,
 ].map((value) => value / 64);
 
-/* Deep blue to cyan, the same ramp as the shader. */
-const FROM = [0.11, 0.26, 0.68];
-const TO = [0.13, 0.69, 0.78];
-const LEVELS = 4;
+/* The shader ramp, and the same constants its retro pass uses. */
+const WAVE = [0.11, 0.26, 0.68];
+const COLOR_NUM = 3.4;
+const BIAS = 0.2;
 
 /**
- * Pixel size of one dither cell on screen. Matched to the shader's resting
- * coarse grid (quality.coarse = 16) rather than picked by eye: a finer grid
- * reads as noise, and the spacing is most of what makes the field feel like
- * the desktop one.
+ * Pixel size of one dither cell on screen, matched to the shader resting grid
+ * (quality.coarse = 16). A finer grid reads as noise.
  */
 const CELL = 15;
+
+/** Cheap deterministic value noise, standing in for the shader FBM. */
+function hash(x, y) {
+  const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+  return n - Math.floor(n);
+}
+
+function valueNoise(x, y) {
+  const xi = Math.floor(x);
+  const yi = Math.floor(y);
+  const xf = x - xi;
+  const yf = y - yi;
+  const u = xf * xf * (3 - 2 * xf);
+  const v = yf * yf * (3 - 2 * yf);
+  const a = hash(xi, yi);
+  const b = hash(xi + 1, yi);
+  const c = hash(xi, yi + 1);
+  const d = hash(xi + 1, yi + 1);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
 
 function drawField(canvas, seed, cssWidth, cssHeight) {
   const width = Math.max(1, Math.ceil(cssWidth / CELL));
@@ -49,7 +67,6 @@ function drawField(canvas, seed, cssWidth, cssHeight) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  /* The seal, as a lookup grid. */
   const mark = new Float32Array(SEAL_GRID * SEAL_GRID);
   buildSeal(seed).cells.forEach(({ x, y, v }) => {
     mark[y * SEAL_GRID + x] = Math.min(1, 0.35 + v * 0.75);
@@ -57,14 +74,13 @@ function drawField(canvas, seed, cssWidth, cssHeight) {
 
   const image = ctx.createImageData(width, height);
   const aspect = width / height;
-  const step = 1 / (LEVELS - 1);
+  const stepSize = 1 / (COLOR_NUM - 1);
 
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       const u = x / width;
       const v = y / height;
 
-      /* The mark, centred and scaled to bleed past the edges. */
       const markX = (u - 0.5) * aspect * 1.6 + 0.5;
       const markY = v * 1.6 - 0.3;
       let value = 0;
@@ -72,24 +88,34 @@ function drawField(canvas, seed, cssWidth, cssHeight) {
         const cell =
           Math.floor(markY * SEAL_GRID) * SEAL_GRID +
           Math.floor(markX * SEAL_GRID);
-        value = mark[cell] * 0.8;
+        value = mark[cell] * 0.72;
       }
 
-      /* A soft diagonal wash so the frame is not empty where the mark is not. */
-      const wash = 1 - Math.min(1, Math.hypot(u - 0.25, v - 0.15) * 1.15);
-      // Ambient matched to the shader floor (0.06). Brighter than that and the
-      // field stops reading as deep water with a mark in it.
-      value += Math.max(0, wash) * 0.44 + 0.07;
+      /* Two octaves of value noise, the cheap stand-in for the shader FBM. */
+      const noise =
+        valueNoise(u * 5 * aspect, v * 5) * 0.6 +
+        valueNoise(u * 11 * aspect, v * 11) * 0.4;
 
-      /* Bayer threshold, then quantise: this is what makes it read as dither. */
-      const threshold = BAYER[(y % 8) * 8 + (x % 8)] - 0.5;
-      const shaded = Math.max(0, Math.min(1, value + threshold * step));
-      const level = Math.round(shaded * (LEVELS - 1)) / (LEVELS - 1);
+      value += 0.06 + noise * 0.42;
 
+      /*
+       * The shader quantises per channel, after subtracting a bias. That bias
+       * is what makes the field sparse: on a blue dominant colour it crushes
+       * red and green to zero and lets blue snap to a whole step, which is why
+       * the dots read as isolated and saturated rather than as a grey wash.
+       * Interpolating a colour and scaling it by brightness cannot reproduce
+       * that, so this ports quantize() from the retro pass directly.
+       */
+      const threshold = BAYER[(y % 8) * 8 + (x % 8)] - 0.25;
       const index = (y * width + x) * 4;
-      image.data[index] = (FROM[0] + (TO[0] - FROM[0]) * level) * level * 255;
-      image.data[index + 1] = (FROM[1] + (TO[1] - FROM[1]) * level) * level * 255;
-      image.data[index + 2] = (FROM[2] + (TO[2] - FROM[2]) * level) * level * 255;
+
+      for (let channel = 0; channel < 3; channel += 1) {
+        let c = WAVE[channel] * value;
+        c += threshold * stepSize;
+        c = Math.max(0, Math.min(1, c - BIAS));
+        c = Math.round(c * (COLOR_NUM - 1)) / (COLOR_NUM - 1);
+        image.data[index + channel] = Math.min(255, c * 255);
+      }
       image.data[index + 3] = 255;
     }
   }
