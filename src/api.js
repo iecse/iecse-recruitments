@@ -1,11 +1,17 @@
 /**
  * API client for the IECSE recruitment backend.
  *
- * Replaces the direct Supabase client. All calls go through the Express
- * backend at /api, which handles validation, rate limiting, and persistence.
+ * Every call goes to the API, never to the database. The API validates
+ * independently, rate limits, and holds the credentials.
+ *
+ * In development this is "/api", which the Vite dev server proxies to the
+ * local Express server on 3001. In production the API is on a different host
+ * from the static page, so VITE_API_BASE carries its absolute origin and this
+ * has to be set at build time. Getting it wrong is not subtle: every request
+ * 404s against the static host instead of reaching the API.
  */
 
-const API_BASE = "/api";
+const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
 /**
  * Submit an application.

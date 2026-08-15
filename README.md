@@ -58,7 +58,58 @@ you change a rule, change both, or the form will pass locally and 400 on send.
 Rate limits per IP: 100 requests/minute globally, 3 submissions/hour, 10
 duplicate lookups/minute.
 
+## Deploying
+
+Three pieces, and only one of them is the static page.
+
+**The API is a Supabase Edge Function**, in `supabase/functions/applications`.
+It replaces the Express server in production; that server stays for local
+development against SQLite. Both read their rules from
+`supabase/functions/_shared/rules.ts`, so the two cannot disagree about what is
+valid.
+
+Once, in the club's Supabase project:
+
+```
+supabase link --project-ref <ref>
+```
+
+Run `server/db/supabase-schema.sql` then `supabase/rate-limit.sql` in the SQL
+editor. The second one is what makes rate limiting work: an edge function is
+stateless and runs in as many instances as it likes, so a counter in memory
+limits one instance and nothing else.
+
+Then:
+
+```
+supabase secrets set ALLOWED_ORIGINS=https://apply.iecse-manipal.com
+supabase functions deploy applications --no-verify-jwt
+```
+
+`--no-verify-jwt` is required. Applicants are anonymous; there is no login and
+no token to present. The function is still not open season: it validates
+everything, rate limits per address, and only ever writes to one table.
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected by Supabase, so
+they are not secrets you set.
+
+**The static page** goes on any static host. Build it with the API's origin
+baked in:
+
+```
+VITE_API_BASE=https://<ref>.supabase.co/functions/v1 npm run build
+```
+
+Without that the app calls `/api`, which only exists behind the Vite dev
+proxy. On a static host every request would 404 against the page itself.
+
+That origin must also appear in `ALLOWED_ORIGINS` above, or the browser blocks
+the response at the CORS check.
+
+**Security headers** are not applied by any of this. Whatever hosts the static
+build needs them set there; the list is in SECURITY.md.
+
 ## Building
+
 
 ```bash
 npm run build

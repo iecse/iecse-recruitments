@@ -1,0 +1,7 @@
+{
+  "$comment": "Edge Functions run on Deno, not Node. Without nodeModulesDir set to none, Deno tries to resolve the function's imports against the Vite app's node_modules directory one level up and fails.",
+  "nodeModulesDir": "none",
+  "imports": {
+    "@supabase/supabase-js": "jsr:@supabase/supabase-js@^2.112.3"
+  }
+}

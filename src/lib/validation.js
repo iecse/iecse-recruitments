@@ -5,14 +5,21 @@
  */
 
 import { isTierAllowed, paysOnApplication } from "./constants";
+/* The single source for every pattern and bound. The API imports the same
+   file, so the two cannot disagree about what is valid. Anything checked in
+   both places must come from here rather than be written out twice. */
+import {
+  MAX,
+  PATTERNS,
+  REGISTRATION_DIGITS as SHARED_REGISTRATION_DIGITS,
+  WHY_JOIN_MIN,
+} from "../../supabase/functions/_shared/rules";
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const URL_LIKE = /^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/.*)?$/i;
-const DIGITS_ONLY = /^\d+$/;
+const EMAIL = PATTERNS.email;
+const URL_LIKE = PATTERNS.url;
+const DIGITS_ONLY = PATTERNS.digitsOnly;
 
-/** MIT Manipal registration numbers. The server enforces the same number. */
-export const REGISTRATION_DIGITS = 10;
-const TEN_DIGITS = /^\d{10}$/;
+export const REGISTRATION_DIGITS = SHARED_REGISTRATION_DIGITS;
 
 const isBlank = (value) => !value || !value.trim();
 
@@ -44,7 +51,7 @@ function validateIdentity(form) {
 
   if (isBlank(form.learnerEmail)) {
     errors.learnerEmail = "Enter your email.";
-  } else if (form.learnerEmail.trim().length > 254) {
+  } else if (form.learnerEmail.trim().length > MAX.learner_email) {
     errors.learnerEmail = "That email address is too long.";
   } else if (!EMAIL.test(form.learnerEmail.trim())) {
     errors.learnerEmail = "That email address is not valid.";
@@ -54,9 +61,9 @@ function validateIdentity(form) {
     errors.phoneNumber = "Enter your phone number.";
   } else {
     const phone = form.phoneNumber.trim();
-    if (!TEN_DIGITS.test(phone)) {
+    if (!/^\d{10}$/.test(phone)) {
       errors.phoneNumber = "Phone numbers are exactly 10 digits.";
-    } else if (!/^[6-9]/.test(phone)) {
+    } else if (!PATTERNS.phone.test(phone)) {
       errors.phoneNumber = "Indian phone numbers start with 6, 7, 8, or 9.";
     }
   }
@@ -73,7 +80,7 @@ function validateIntent(form) {
 
   if (isBlank(form.whyJoin)) {
     errors.whyJoin = "Tell us why you want to join.";
-  } else if (form.whyJoin.trim().length < 40) {
+  } else if (form.whyJoin.trim().length < WHY_JOIN_MIN) {
     errors.whyJoin = "Give us a bit more, at least a couple of sentences.";
   }
 
@@ -92,7 +99,7 @@ function validateEvidence(form) {
   Object.entries(linkFields).forEach(([key, label]) => {
     const value = form[key];
     if (isBlank(value)) return;
-    if (value.trim().length > 2048) {
+    if (value.trim().length > MAX.url) {
       errors[key] = `That ${label} link is too long.`;
     } else if (!URL_LIKE.test(value.trim())) {
       errors[key] = `That does not look like a valid ${label} URL.`;
@@ -124,7 +131,7 @@ function validatePayment(form) {
 
   if (isBlank(form.paymentId)) {
     errors.paymentId = "Enter the transaction ID or UTR from your payment.";
-  } else if (!/^[A-Za-z0-9]{8,64}$/.test(form.paymentId.trim())) {
+  } else if (!PATTERNS.payment.test(form.paymentId.trim())) {
     errors.paymentId =
       "A UPI reference is at least 8 characters, letters and digits only.";
   }
