@@ -211,10 +211,11 @@ void main() {
   vec2 markUv = (screenUv - sealCenter) * vec2(aspect, 1.0) / sealScale;
   markUv -= fluid.rg * fluidDrag * 1.4;
   markUv += 0.5;
-  float mark = 0.0;
-  if (markUv.x > 0.0 && markUv.x < 1.0 && markUv.y > 0.0 && markUv.y < 1.0) {
-    mark = texture2D(sealField, markUv).r;
-  }
+  // No bounds test. The grid carries an empty margin on all four sides and the
+  // texture clamps to edge, so sampling outside returns nothing on its own. The
+  // test used to draw a hard straight line wherever the fluid pushed markUv
+  // past the box, which is a second way to get an abrupt cut across the glyph.
+  float mark = texture2D(sealField, markUv).r;
 
   // Noise is the developer bath, the mark is the latent image. sealMix rises
   // with application progress, so the picture comes up as the form fills.
