@@ -53,7 +53,7 @@ export async function submitApplication(payload) {
  */
 export async function checkRegistration(registration) {
   const regNo = String(registration || "").trim();
-  if (!/^\d{9,20}$/.test(regNo)) return false;
+  if (!/^\d{10}$/.test(regNo)) return false;
 
   try {
     const res = await fetch(`${API_BASE}/applications/check/${regNo}`);

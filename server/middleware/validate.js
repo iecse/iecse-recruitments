@@ -32,8 +32,9 @@ const PAYMENT_RE = /^[A-Za-z0-9]{8,64}$/;
  * endpoint that lets a stranger choose how many bytes land in the table is
  * worth closing even when nothing dramatic follows from it.
  */
+const REGISTRATION_DIGITS = 10;
+
 const MAX = {
-  registration_number: 20,
   learner_email: 254,
   phone_number: 10,
   url: 2048,
@@ -86,10 +87,8 @@ export function validateApplication(body) {
     const reg = sanitize(body.registration_number);
     if (!DIGITS_ONLY.test(reg)) {
       errors.registration_number = "Registration number must be digits only.";
-    } else if (reg.length < 9) {
-      errors.registration_number = "Registration number is too short.";
-    } else if (reg.length > MAX.registration_number) {
-      errors.registration_number = "Registration number is too long.";
+    } else if (reg.length !== REGISTRATION_DIGITS) {
+      errors.registration_number = `Registration number must be exactly ${REGISTRATION_DIGITS} digits.`;
     }
   }
 

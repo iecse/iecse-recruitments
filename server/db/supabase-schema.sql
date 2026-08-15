@@ -14,7 +14,7 @@ create table if not exists public.applications (
   id                  bigint generated always as identity primary key,
   full_name           varchar(200)  not null,
   year                varchar(20)   not null check (year in ('1st Year', '2nd Year')),
-  registration_number varchar(20)   not null unique,
+  registration_number varchar(10)   not null unique,
   branch              varchar(100)  not null,
   domain              text          not null,
   learner_email       varchar(254)  not null unique,

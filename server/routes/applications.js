@@ -153,7 +153,7 @@ router.post(
 router.get("/check/:regNo", checkLimiter, async (req, res) => {
   const regNo = String(req.params.regNo || "").trim();
 
-  if (!/^\d{9,20}$/.test(regNo)) {
+  if (!/^\d{10}$/.test(regNo)) {
     return res.status(400).json({ error: "Invalid registration number." });
   }
 

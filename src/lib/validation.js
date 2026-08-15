@@ -9,6 +9,9 @@ import { isTierAllowed, paysOnApplication } from "./constants";
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const URL_LIKE = /^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/.*)?$/i;
 const DIGITS_ONLY = /^\d+$/;
+
+/** MIT Manipal registration numbers. The server enforces the same number. */
+export const REGISTRATION_DIGITS = 10;
 const TEN_DIGITS = /^\d{10}$/;
 
 const isBlank = (value) => !value || !value.trim();
@@ -29,12 +32,10 @@ function validateIdentity(form) {
     const reg = form.registrationNumber.trim();
     if (!DIGITS_ONLY.test(reg)) {
       errors.registrationNumber = "Registration numbers are digits only.";
-    } else if (reg.length < 9) {
-      // The server enforces the same bounds. Catching them here keeps the
+    } else if (reg.length !== REGISTRATION_DIGITS) {
+      // The server enforces the same length. Catching it here keeps the
       // applicant from finding out on the last screen.
-      errors.registrationNumber = "That is too short. Registration numbers are 9 digits.";
-    } else if (reg.length > 20) {
-      errors.registrationNumber = "That is too long for a registration number.";
+      errors.registrationNumber = `Registration numbers are exactly ${REGISTRATION_DIGITS} digits.`;
     }
   }
 
