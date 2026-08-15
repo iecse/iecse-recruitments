@@ -30,9 +30,11 @@ function validateIdentity(form) {
     if (!DIGITS_ONLY.test(reg)) {
       errors.registrationNumber = "Registration numbers are digits only.";
     } else if (reg.length < 9) {
-      // The server enforces the same floor. Catching it here keeps the
+      // The server enforces the same bounds. Catching them here keeps the
       // applicant from finding out on the last screen.
       errors.registrationNumber = "That is too short. Registration numbers are 9 digits.";
+    } else if (reg.length > 20) {
+      errors.registrationNumber = "That is too long for a registration number.";
     }
   }
 
@@ -41,6 +43,8 @@ function validateIdentity(form) {
 
   if (isBlank(form.learnerEmail)) {
     errors.learnerEmail = "Enter your email.";
+  } else if (form.learnerEmail.trim().length > 254) {
+    errors.learnerEmail = "That email address is too long.";
   } else if (!EMAIL.test(form.learnerEmail.trim())) {
     errors.learnerEmail = "That email address is not valid.";
   }
@@ -86,7 +90,10 @@ function validateEvidence(form) {
 
   Object.entries(linkFields).forEach(([key, label]) => {
     const value = form[key];
-    if (!isBlank(value) && !URL_LIKE.test(value.trim())) {
+    if (isBlank(value)) return;
+    if (value.trim().length > 2048) {
+      errors[key] = `That ${label} link is too long.`;
+    } else if (!URL_LIKE.test(value.trim())) {
       errors[key] = `That does not look like a valid ${label} URL.`;
     }
   });
@@ -116,7 +123,7 @@ function validatePayment(form) {
 
   if (isBlank(form.paymentId)) {
     errors.paymentId = "Enter the transaction ID or UTR from your payment.";
-  } else if (!/^[A-Za-z0-9]{8,}$/.test(form.paymentId.trim())) {
+  } else if (!/^[A-Za-z0-9]{8,64}$/.test(form.paymentId.trim())) {
     errors.paymentId =
       "A UPI reference is at least 8 characters, letters and digits only.";
   }

@@ -17,8 +17,16 @@ const PORT = process.env.PORT || 3001;
 const app = express();
 
 /* ---- proxy configuration ---- */
-// Required for express-rate-limit if hosted behind Nginx, Render, Vercel, etc.
-app.set("trust proxy", 1);
+// How many proxies sit in front of this, from TRUST_PROXY. Default 0.
+//
+// This is not a formality. Trusting a proxy that is not there means req.ip is
+// taken from the X-Forwarded-For header, which the client sends, so anyone can
+// hand the rate limiter a fresh identity on every request and the limits stop
+// existing. It was hardcoded to 1; if this ever ran without exactly one proxy
+// in front, that was a silent bypass. Set TRUST_PROXY to match the deployment,
+// and leave it alone if you are not sure.
+const trustProxy = Number.parseInt(process.env.TRUST_PROXY ?? "0", 10);
+app.set("trust proxy", Number.isNaN(trustProxy) ? 0 : trustProxy);
 
 /* ---- security ---- */
 app.use(helmet());

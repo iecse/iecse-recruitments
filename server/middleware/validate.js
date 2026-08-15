@@ -22,7 +22,22 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DIGITS_ONLY = /^\d+$/;
 const PHONE_RE = /^[6-9]\d{9}$/;
 const URL_RE = /^(https?:\/\/)?[\w-]+(\.[\w-]+)+(\/\S*)?$/i;
-const PAYMENT_RE = /^[A-Za-z0-9]{8,}$/;
+const PAYMENT_RE = /^[A-Za-z0-9]{8,64}$/;
+
+/**
+ * Upper bounds on everything, not just the free text fields.
+ *
+ * express.json caps a body at 1mb, and without a ceiling of its own every
+ * field below would happily accept most of that and store it. An anonymous
+ * endpoint that lets a stranger choose how many bytes land in the table is
+ * worth closing even when nothing dramatic follows from it.
+ */
+const MAX = {
+  registration_number: 20,
+  learner_email: 254,
+  phone_number: 10,
+  url: 2048,
+};
 
 import sanitizeHtml from "sanitize-html";
 
@@ -73,6 +88,8 @@ export function validateApplication(body) {
       errors.registration_number = "Registration number must be digits only.";
     } else if (reg.length < 9) {
       errors.registration_number = "Registration number is too short.";
+    } else if (reg.length > MAX.registration_number) {
+      errors.registration_number = "Registration number is too long.";
     }
   }
 
@@ -109,6 +126,8 @@ export function validateApplication(body) {
   // ---- learner_email ----
   if (isBlank(body.learner_email)) {
     errors.learner_email = "Email is required.";
+  } else if (body.learner_email.trim().length > MAX.learner_email) {
+    errors.learner_email = "Email address is too long.";
   } else if (!EMAIL_RE.test(body.learner_email.trim())) {
     errors.learner_email = "Invalid email format.";
   }
@@ -167,7 +186,10 @@ export function validateApplication(body) {
   // ---- optional URL fields ----
   for (const field of ["github_url", "linkedin_url", "portfolio_url", "other_links"]) {
     const val = trimOrNull(body[field]);
-    if (val && !URL_RE.test(val)) {
+    if (!val) continue;
+    if (val.length > MAX.url) {
+      errors[field] = `That ${field.replace(/_/g, " ")} is too long.`;
+    } else if (!URL_RE.test(val)) {
       errors[field] = `Invalid URL format for ${field.replace(/_/g, " ")}.`;
     }
   }
