@@ -1,6 +1,6 @@
-import { Suspense, lazy, useState } from "react";
+import { Suspense, lazy, useCallback, useState } from "react";
 import StaticDither from "./StaticDither";
-import { useCoarsePointer, useMediaQuery, useReducedMotion } from "../../lib/hooks";
+import { useCoarsePointer, useReducedMotion } from "../../lib/hooks";
 
 /**
  * The WebGL field is the single heaviest thing on the page, so it is code
@@ -50,17 +50,18 @@ export default function Backdrop({ progress, seed = "iecse", allowShader = true 
   const reducedMotion = useReducedMotion();
   const coarsePointer = useCoarsePointer();
   const [webgl] = useState(hasWebGL);
-  // Tailwind hidden/lg:hidden only affects paint, so the mount decision has to
-  // happen in JS. A viewport query alone is not enough: above lg it is true for
-  // the desktop field AND for the lg:hidden mobile strip, which is how two live
-  // contexts survived the first attempt at this. Call sites that must never run
-  // the shader say so explicitly.
-  const wide = useMediaQuery("(min-width: 1024px)");
+  // The field used to be gated to >= 1024px, because the three.js build of it
+  // cost 254 KB gzip and a phone was getting a 210px strip for the money. On
+  // OGL it is around 20 KB, so every applicant gets it, which is the point:
+  // they are almost all on a phone. Call sites that must never run it say so.
+  //
+  // The GPU can still refuse, on an old Android driver with no WebGL2 or no
+  // float render targets. It reports that through onUnsupported and this falls
+  // back to the static field without anyone seeing a broken canvas.
+  const [gpuRefused, setGpuRefused] = useState(false);
+  const onUnsupported = useCallback(() => setGpuRefused(true), []);
 
-  // Below lg the field is a 210px strip that scrolls away in one swipe. It is
-  // not worth 253 KB gzip of three.js, and neither is a single static frame
-  // for someone who asked for reduced motion.
-  const showShader = allowShader && webgl && wide && !reducedMotion;
+  const showShader = allowShader && webgl && !reducedMotion && !gpuRefused;
 
   return (
     <div
@@ -76,6 +77,7 @@ export default function Backdrop({ progress, seed = "iecse", allowShader = true 
             animate={!reducedMotion}
             interactive={!reducedMotion}
             compact={coarsePointer}
+            onUnsupported={onUnsupported}
           />
           </div>
         </Suspense>
