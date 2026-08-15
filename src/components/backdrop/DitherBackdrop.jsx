@@ -90,7 +90,7 @@ void main() {
   // drifted off the brand ramp into a washed out mauve within a minute. It
   // also matters more now than it did: a phone has no resting cursor at all.
   velocity += uPointerVelocity * splat * uForce * uDelta * uPointerActive;
-  dye += splat * uDelta * 9.0 * uPointerActive;
+  dye += splat * uDelta * 3.2 * uPointerActive;
 
   // Shockwave. Fired when the applicant clears a step, pushing outward from
   // the button they just pressed, so progress is something you feel in the
@@ -98,9 +98,12 @@ void main() {
   if (uImpulseStrength > 0.001) {
     vec2 toward = (vUv - uImpulse) * vec2(uAspect, 1.0);
     float distance = length(toward) + 1e-5;
-    float ring = exp(-distance * distance / (uRadius * 9.0));
+    // Was uRadius * 9.0, which is most of the viewport: one click and the
+    // whole screen went cyan. A shockwave should read as a ring you can see
+    // the edge of.
+    float ring = exp(-distance * distance / (uRadius * 2.6));
     velocity += (toward / distance) * ring * uImpulseStrength * uDelta * 26.0;
-    dye += ring * uImpulseStrength * uDelta * 14.0;
+    dye += ring * uImpulseStrength * uDelta * 5.0;
   }
 
   // Frame rate independent decay, so a 144Hz screen does not damp four times
@@ -214,15 +217,18 @@ void main() {
   // dead black, so a pointer crossing them had no field left to disturb. 0.15
   // clears the bias on the dither's upper thresholds and not its lower ones,
   // which is what makes a sparse floor rather than a grey wash.
-  float value = 0.15 + f * (0.27 + (1.0 - sealMix) * 0.32) + mark * sealMix * (0.72 + f * 0.55);
+  // The floor only has to clear the bias on the dither's upper thresholds, so
+  // the darkest areas read as sparse deep water. 0.15 cleared far too many of
+  // them and the whole field came out busy.
+  float value = 0.105 + f * (0.22 + (1.0 - sealMix) * 0.26) + mark * sealMix * (0.66 + f * 0.5);
 
   // The wake is a blend toward the hot end of the same ramp, and nothing is
   // added on top. The old additive term let dye push the result past 1.0, and
   // channels clipped at different points, so a strong wake turned magenta and
   // then white instead of staying on the club's two colours.
   vec3 col = mix(vec3(0.0), waveColor, value);
-  float wake = clamp(fluid.b * 0.6, 0.0, 1.0);
-  col = mix(col, dyeColor, wake * 0.9);
+  float wake = clamp(fluid.b * 0.42, 0.0, 1.0);
+  col = mix(col, dyeColor, wake * 0.6);
 
   gl_FragColor = vec4(col, 1.0);
 }
@@ -326,10 +332,10 @@ const COMPACT = {
   coarse: 13,
   colorNumStart: 3,
   colorNumEnd: 4,
-  focusRadius: 0.34,
+  focusRadius: 0.2,
   focusStrength: 0.5,
   simSize: 128,
-  splatRadius: 0.05,
+  splatRadius: 0.02,
   splatForce: 0.9,
   drag: 0.55,
   sealScale: 1.5,
@@ -341,10 +347,10 @@ const FULL = {
   coarse: 16,
   colorNumStart: 3.4,
   colorNumEnd: 5.5,
-  focusRadius: 0.26,
+  focusRadius: 0.15,
   focusStrength: 0.9,
   simSize: 256,
-  splatRadius: 0.03,
+  splatRadius: 0.012,
   splatForce: 1.25,
   drag: 0.8,
   sealScale: 1.15,
@@ -604,7 +610,7 @@ export default function DitherBackdrop({
       fluidProgram.uniforms.uImpulse.value.set(x, y);
       // A tap is one ripple. It deliberately does not open the splat window:
       // a finger that lands and stops should leave a wake and nothing more.
-      fluidProgram.uniforms.uImpulseStrength.value = 0.7;
+      fluidProgram.uniforms.uImpulseStrength.value = 0.28;
     };
 
     /* Impulses arrive as events so any component can fire one without this
@@ -614,7 +620,7 @@ export default function DitherBackdrop({
       if (typeof x !== "number" || typeof y !== "number") return;
       const [u, v] = toUv(x, y);
       fluidProgram.uniforms.uImpulse.value.set(u, v);
-      fluidProgram.uniforms.uImpulseStrength.value = 1;
+      fluidProgram.uniforms.uImpulseStrength.value = 0.45;
     };
 
     /* Focus: the fallback anchor for keyboards. */
@@ -721,7 +727,7 @@ export default function DitherBackdrop({
         // parked cursor pumping dye in forever and drifting off the ramp.
         const speed = Math.hypot(pointer.velocity.x, pointer.velocity.y);
         fu.uPointerActive.value = pointerLive
-          ? Math.min(1, 0.45 + speed * 0.7)
+          ? Math.min(1, 0.16 + speed * 0.55)
           : 0;
         fu.uPrevious.value = fluidRead.texture;
         fu.uPointer.value.copy(pointer.uv);
@@ -731,7 +737,9 @@ export default function DitherBackdrop({
         if (!introFired && time - mountedAt > 0.25) {
           introFired = true;
           fu.uImpulse.value.set(0.5, 0.5);
-          fu.uImpulseStrength.value = 1.6;
+          // The opening bloom was 1.6 across a ring most of the screen wide,
+          // which arrived as a flash of flat cyan before anything was legible.
+          fu.uImpulseStrength.value = 0.4;
         }
 
         // Short, hard decay: a shockwave is an event, not a state.

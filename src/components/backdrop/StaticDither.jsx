@@ -101,7 +101,7 @@ function drawField(canvas, seed, cssWidth, cssHeight) {
         valueNoise(u * 5 * aspect, v * 5) * 0.6 +
         valueNoise(u * 11 * aspect, v * 11) * 0.4;
 
-      value += 0.15 + noise * 0.42;
+      value += 0.105 + noise * 0.36;
 
       /*
        * The shader quantises per channel, after subtracting a bias. That bias
