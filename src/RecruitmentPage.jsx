@@ -383,7 +383,10 @@ export default function RecruitmentPage() {
                   <img src={wordmark} alt="IECSE" className="h-[24px] w-auto" />
                 </a>
                 <p className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.12em] text-faint">
-                  <span>Rs {MEMBERSHIP_FEE}</span>
+                  {/* Not uppercased with the rest of the row. Rs is a currency
+                      abbreviation, not an acronym, and RS 250 reads as neither
+                      rupees nor anything else. */}
+                  <span className="normal-case">Rs {MEMBERSHIP_FEE}</span>
                   <span aria-hidden="true">/</span>
                   <span>
                     Step {submitted ? LAST_STEP : step} of {LAST_STEP}

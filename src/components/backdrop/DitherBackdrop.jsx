@@ -358,6 +358,9 @@ const FOCUSABLE = "input, select, textarea, button, a[href], [tabindex]";
 
 const lerp = (a, b, t) => a + (b - a) * t;
 
+/** Kept clear of the viewport edge so the glyph never touches it. */
+const EDGE_MARGIN = 0.02;
+
 /**
  * Phones get a smaller simulation, a coarser grid and a wider splat, because a
  * fingertip is a blunter instrument than a cursor and a mid range GPU has a
@@ -378,8 +381,11 @@ const COMPACT = {
   // 0.66 on a 390x844 screen the mark ran off both edges. Sized to sit in the
   // strip above the sheet instead, which is the only part of the field a phone
   // shows for more than a moment.
-  sealScale: 0.34,
-  sealCenter: [0.5, 0.13],
+  // Wider than the desktop wish looks, because a phone is tall: the clamp in
+  // resize() is what stops this running off the sides. Sits high so the top of
+  // the mark is in the strip above the sheet and the rest reads behind it.
+  sealScale: 0.52,
+  sealCenter: [0.5, 0.32],
   maxDpr: 1,
 };
 
@@ -397,8 +403,8 @@ const FULL = {
   // Sized and placed for the band the layout actually leaves free: the sheet
   // takes the left of a wide viewport and the rail card the top right, so the
   // mark sits below and left of the card and stops short of the right edge.
-  sealScale: 0.68,
-  sealCenter: [0.74, 0.56],
+  sealScale: 0.86,
+  sealCenter: [0.7, 0.55],
   maxDpr: 1,
 };
 
@@ -611,7 +617,21 @@ export default function DitherBackdrop({
       waveProgram.uniforms.resolution.value.set(bufferWidth, bufferHeight);
       ditherProgram.uniforms.resolution.value.set(bufferWidth, bufferHeight);
       ditherProgram.uniforms.inputBuffer.value = waveTarget.texture;
-      fluidProgram.uniforms.uAspect.value = width / Math.max(height, 1);
+      const aspect = width / Math.max(height, 1);
+      fluidProgram.uniforms.uAspect.value = aspect;
+
+      // sealScale is a wish, not a setting. It is the mark's height as a
+      // fraction of the viewport, and a square glyph at a given height is
+      // wider on a narrow window, so the same number that looks right at
+      // 1920 runs off both edges at 1024 tall or on a phone. Clamped here to
+      // whatever actually fits either side of sealCenter, which means the
+      // wish can be raised without reintroducing a cropped S.
+      const [cx] = quality.sealCenter;
+      const room = Math.min(cx, 1 - cx) - EDGE_MARGIN;
+      waveProgram.uniforms.sealScale.value = Math.min(
+        quality.sealScale,
+        Math.max(0.1, 2 * room * aspect)
+      );
     };
     resize();
 
