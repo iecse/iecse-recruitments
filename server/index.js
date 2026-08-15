@@ -12,6 +12,7 @@ import cors from "cors";
 import helmet from "helmet";
 import { globalLimiter } from "./middleware/rateLimit.js";
 import applicationRoutes from "./routes/applications.js";
+import { describeStorage } from "./db/supabase.js";
 
 const PORT = process.env.PORT || 3001;
 const app = express();
@@ -90,5 +91,10 @@ app.use((err, _req, res, _next) => {
 app.listen(PORT, () => {
   console.log(`\n  IECSE Recruitment API`);
   console.log(`  → http://localhost:${PORT}`);
-  console.log(`  → Health: http://localhost:${PORT}/api/health\n`);
+  console.log(`  → Health: http://localhost:${PORT}/api/health`);
+  // Which database is in use is the thing most worth being certain about at
+  // boot. A key under the wrong name used to fall through to a local SQLite
+  // file without saying anything, and nobody finds that out until the
+  // committee opens an empty table.
+  console.log(`  → Storage: ${describeStorage()}\n`);
 });

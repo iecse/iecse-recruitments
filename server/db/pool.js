@@ -14,12 +14,23 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import fs from "node:fs";
+import { supabase } from "./supabase.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let db;
 
-if (process.env.DATABASE_URL) {
+if (supabase) {
+  /* ---- Supabase owns storage; this layer is unused ---- */
+  // Without this branch the SQLite client still opened, which created a stray
+  // database file next to a production deployment and printed a boot line
+  // saying SQLite was in use while every write went to Supabase. Nothing calls
+  // db in this configuration, so it throws rather than pretending to work.
+  const unused = () => {
+    throw new Error("Supabase is configured; the SQL layer is not in use.");
+  };
+  db = { query: unused, run: unused, close: () => {} };
+} else if (process.env.DATABASE_URL) {
   /* ---- PostgreSQL (production) ---- */
   const { default: pg } = await import("pg");
   const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });

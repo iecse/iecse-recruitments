@@ -7,12 +7,7 @@
 
 import { Router } from "express";
 import db from "../db/pool.js";
-import { createClient } from "@supabase/supabase-js";
-
-let supabase = null;
-if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
-  supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
-}
+import { supabase } from "../db/supabase.js";
 import { validateApplicationMiddleware } from "../middleware/validate.js";
 import { checkLimiter, submitLimiter } from "../middleware/rateLimit.js";
 
