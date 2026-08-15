@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { SEAL_GRID, buildSeal } from "../../lib/seal";
+import { LOGO_GRID, buildLogoCoverage } from "../../lib/logoMark";
 
 /**
  * The dithered field, drawn once to a 2D canvas.
@@ -72,10 +72,11 @@ function drawField(canvas, seed, cssWidth, cssHeight) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  const mark = new Float32Array(SEAL_GRID * SEAL_GRID);
-  buildSeal(seed).cells.forEach(({ x, y, v }) => {
-    mark[y * SEAL_GRID + x] = Math.min(1, 0.35 + v * 0.75);
-  });
+  // The same mark the shader resolves into, so the still version and the live
+  // one are the same picture. The seed is unused here: the shape is the club's
+  // and the per applicant grain is not worth a second code path on a fallback
+  // that is on screen for a moment.
+  const mark = buildLogoCoverage();
 
   const image = ctx.createImageData(width, height);
   const aspect = width / height;
@@ -91,8 +92,8 @@ function drawField(canvas, seed, cssWidth, cssHeight) {
       let value = 0;
       if (markX >= 0 && markX < 1 && markY >= 0 && markY < 1) {
         const cell =
-          Math.floor(markY * SEAL_GRID) * SEAL_GRID +
-          Math.floor(markX * SEAL_GRID);
+          Math.floor(markY * LOGO_GRID) * LOGO_GRID +
+          Math.floor(markX * LOGO_GRID);
         value = mark[cell] * 0.72;
       }
 

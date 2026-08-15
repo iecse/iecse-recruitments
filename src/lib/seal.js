@@ -1,3 +1,5 @@
+import { LOGO_GRID, buildLogoCoverage } from "./logoMark.js";
+
 /**
  * Deterministic applicant seal.
  *
@@ -73,19 +75,35 @@ export function buildSeal(registration) {
  * on whatever phone an applicant happens to own.
  */
 export function buildSealTexture(registration) {
-  const { cells } = buildSeal(registration);
-  const size = SEAL_GRID;
+  const coverage = buildLogoCoverage();
+  const size = LOGO_GRID;
   const data = new Uint8Array(size * size * 4);
 
-  cells.forEach(({ x, y, v }) => {
-    // Flip y: texture space runs bottom up, the grid is authored top down.
-    const index = ((size - 1 - y) * size + x) * 4;
-    const level = Math.round(Math.min(1, 0.35 + v * 0.75) * 255);
-    data[index] = level;
-    data[index + 1] = level;
-    data[index + 2] = level;
-    data[index + 3] = 255;
-  });
+  // The shape is the club's S. What the applicant's number decides is the
+  // grain inside it, not the outline: the field used to resolve into an
+  // 11x11 procedural halftone, which is unique per applicant and reads as
+  // noise, because a random arrangement of squares looks like exactly that.
+  // Resolving into the mark means the picture that comes up is recognisably
+  // the club, and the number still makes it theirs.
+  const random = mulberry32(hashString(String(registration || "").trim() || "iecse"));
+
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const cover = coverage[y * size + x];
+      // Flip y: texture space runs bottom up, the grid is authored top down.
+      const index = ((size - 1 - y) * size + x) * 4;
+
+      // Grain never drops a cell far enough to bite a hole in the glyph, and
+      // never lifts one outside it. The S stays the S at every seed.
+      const grain = 0.72 + random() * 0.28;
+      const level = Math.round(Math.min(1, cover * grain) * 255);
+
+      data[index] = level;
+      data[index + 1] = level;
+      data[index + 2] = level;
+      data[index + 3] = 255;
+    }
+  }
 
   return { data, size };
 }
