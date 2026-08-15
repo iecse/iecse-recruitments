@@ -720,7 +720,7 @@ export default function DitherBackdrop({
       // resolves into its resting state, with one bloom pushed out of the
       // centre so the fluid announces itself before anyone touches it.
       if (mountedAt === null) mountedAt = time;
-      const introRaw = running ? Math.min(1, (time - mountedAt) / 1.6) : 1;
+      const introRaw = running ? Math.min(1, (time - mountedAt) / 0.9) : 1;
       const intro = 1 - Math.pow(1 - introRaw, 3);
 
       /* ---- fluid step ---- */
@@ -817,9 +817,11 @@ export default function DitherBackdrop({
         resolved
       );
       // Chunky on arrival, settling to the working grid as the intro plays.
+      // Was 2.4x over 1.6s, which arrived as a slab of enormous blocks and
+      // took long enough to resolve that it read as the page struggling.
       du.pixelSizeCoarse.value =
         lerp(quality.coarse, quality.coarse * 0.72, resolved) *
-        lerp(2.4, 1, intro);
+        lerp(1.45, 1, intro);
       du.focusStrength.value = smoothedFocus * quality.focusStrength;
       du.focusCenter.value.lerp(anchor, k);
 

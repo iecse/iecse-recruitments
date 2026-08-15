@@ -126,3 +126,52 @@ export function useHashStep(step, setStep, max) {
     window.history.pushState(null, "", target);
   }, [step]);
 }
+
+/**
+ * True once the page has actually painted and the browser has gone idle.
+ *
+ * Anything mounted on this is explicitly not first paint work. The field used
+ * to start its module fetch, its module eval and three shader compiles in the
+ * same frame React was rendering the form and the fonts were still arriving,
+ * and the whole load felt like it stuttered.
+ *
+ * Idle alone is not enough of a guarantee: on a fast connection the browser
+ * reports idle before it has painted anything, which is exactly the moment
+ * this is trying to stay out of. Two frames first, which is a painted frame,
+ * and only then ask for idle. The static field covers the gap.
+ */
+export function useIdleMount({ timeout = 1200 } = {}) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    let idleHandle = null;
+    let timer = null;
+
+    const afterPaint = () => {
+      if (typeof window.requestIdleCallback === "function") {
+        idleHandle = window.requestIdleCallback(() => setReady(true), { timeout });
+      } else {
+        timer = setTimeout(() => setReady(true), 300);
+      }
+    };
+
+    // Two frames is one painted frame: the first is the one being composed
+    // when this runs, the second cannot start until it has gone out.
+    const first = requestAnimationFrame(() => {
+      idleHandle = requestAnimationFrame(afterPaint);
+    });
+
+    return () => {
+      cancelAnimationFrame(first);
+      if (timer) clearTimeout(timer);
+      if (idleHandle !== null) {
+        cancelAnimationFrame(idleHandle);
+        window.cancelIdleCallback?.(idleHandle);
+      }
+    };
+  }, [timeout]);
+
+  return ready;
+}

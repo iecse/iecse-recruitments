@@ -1,6 +1,6 @@
 import { Suspense, lazy, useCallback, useState } from "react";
 import StaticDither from "./StaticDither";
-import { useCoarsePointer, useReducedMotion } from "../../lib/hooks";
+import { useCoarsePointer, useIdleMount, useReducedMotion } from "../../lib/hooks";
 
 /**
  * The WebGL field is the single heaviest thing on the page, so it is code
@@ -61,7 +61,14 @@ export default function Backdrop({ progress, seed = "iecse", allowShader = true 
   const [gpuRefused, setGpuRefused] = useState(false);
   const onUnsupported = useCallback(() => setGpuRefused(true), []);
 
-  const showShader = allowShader && webgl && !reducedMotion && !gpuRefused;
+  // Held back until the browser is idle. lazy() starts its fetch the moment
+  // the component renders, and the module eval plus three shader compiles then
+  // land in the same frames as the form and the webfonts. The static field is
+  // already on screen, so nothing is missing in the meantime.
+  const idle = useIdleMount();
+
+  const showShader =
+    allowShader && idle && webgl && !reducedMotion && !gpuRefused;
 
   return (
     <div

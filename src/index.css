@@ -179,7 +179,7 @@ input:-webkit-autofill:focus {
   }
 
   .field-in {
-    animation: field-in 900ms ease-out both;
+    animation: field-in 600ms ease-out both;
   }
 
   .step-forward {
