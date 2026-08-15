@@ -154,7 +154,69 @@ export const DEFAULT_FORM = {
   paymentConfirmed: false,
 };
 
-/** Maps camelCase form state onto the snake_case columns Supabase expects. */
+/**
+ * Inverse of the payload mapping. The server validates independently and
+ * answers in its own snake_case, so its errors have to be translated back
+ * before they can be shown against an input.
+ */
+const PAYLOAD_TO_FORM = {
+  full_name: "fullName",
+  year: "year",
+  registration_number: "registrationNumber",
+  branch: "branch",
+  domain: "domain",
+  learner_email: "learnerEmail",
+  phone_number: "phoneNumber",
+  why_join: "whyJoin",
+  github_url: "githubUrl",
+  linkedin_url: "linkedinUrl",
+  portfolio_url: "portfolioUrl",
+  other_links: "otherLinks",
+  certifications: "certifications",
+  projects: "projects",
+  tier: "tier",
+  payment_id: "paymentId",
+};
+
+/** Which step owns each field, so a rejection can send the applicant there. */
+const FIELD_STEP = {
+  fullName: 1,
+  year: 1,
+  registrationNumber: 1,
+  branch: 1,
+  learnerEmail: 1,
+  phoneNumber: 1,
+  domain: 2,
+  whyJoin: 2,
+  projects: 3,
+  githubUrl: 3,
+  linkedinUrl: 3,
+  portfolioUrl: 3,
+  otherLinks: 3,
+  certifications: 3,
+  tier: 4,
+  paymentId: 5,
+  paymentConfirmed: 5,
+};
+
+/** Translates a server `fields` object into form-state error keys. */
+export function mapServerFields(fields) {
+  if (!fields || typeof fields !== "object") return {};
+  const mapped = {};
+  Object.entries(fields).forEach(([key, message]) => {
+    const formKey = PAYLOAD_TO_FORM[key];
+    if (formKey && typeof message === "string") mapped[formKey] = message;
+  });
+  return mapped;
+}
+
+/** The earliest step that owns any of the given form-state error keys. */
+export function stepForFields(formKeys) {
+  const steps = formKeys.map((key) => FIELD_STEP[key] || 1);
+  return steps.length > 0 ? Math.min(...steps) : 1;
+}
+
+/** Maps camelCase form state onto the snake_case columns the API expects. */
 export function toApplicationPayload(form) {
   const domain = Array.isArray(form.domain)
     ? form.domain.join(", ")

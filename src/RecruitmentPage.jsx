@@ -18,6 +18,8 @@ import {
   STEPS,
   STORAGE_KEY,
   isTierAllowed,
+  mapServerFields,
+  stepForFields,
   stepsForTier,
   toApplicationPayload,
 } from "./lib/constants";
@@ -27,7 +29,7 @@ import {
   firstInvalidStep,
   validateStep,
 } from "./lib/validation";
-import { isConfigured, supabase } from "./supabase";
+import { checkRegistration, submitApplication } from "./api";
 import wordmark from "./assets/iecse-wordmark-colour.svg";
 
 const LAST_STEP = STEPS.length;
@@ -207,19 +209,12 @@ export default function RecruitmentPage() {
 
   /**
    * Duplicate registration numbers are rejected by a unique constraint at
-   * submit time, which is a miserable place to find out. This checks early and
-   * fails open: if the anon role cannot read the table, nothing is shown.
+   * insert time, which is a miserable place to find out. This asks the API on
+   * blur and fails open: if the lookup cannot answer, nothing is shown.
    */
   const checkDuplicate = useCallback(async () => {
-    const registration = form.registrationNumber.trim();
-    if (!supabase || !/^\d+$/.test(registration)) return;
-
-    const { count, error } = await supabase
-      .from("applications")
-      .select("registration_number", { count: "exact", head: true })
-      .eq("registration_number", registration);
-
-    if (!error && typeof count === "number") setDuplicate(count > 0);
+    const taken = await checkRegistration(form.registrationNumber);
+    setDuplicate(taken);
   }, [form.registrationNumber]);
 
   const handleSubmit = useCallback(
@@ -240,33 +235,32 @@ export default function RecruitmentPage() {
         return;
       }
 
-      if (!supabase) {
-        setSubmitError(
-          "The application service is not configured on this deployment. Tell the committee before trying again."
-        );
-        return;
-      }
-
       setErrors({});
       setSubmitError("");
       setSubmitting(true);
 
-      const { error } = await supabase
-        .from("applications")
-        .insert([toApplicationPayload(form)]);
+      const result = await submitApplication(toApplicationPayload(form));
 
       setSubmitting(false);
 
-      if (error) {
-        if (error.code === "23505") {
-          setSubmitError(
-            "An application already exists for this registration number or email. Contact the committee if that was not you."
-          );
-        } else {
-          setSubmitError(
-            "Something went wrong saving your application. Your answers are still here, so try again in a moment."
-          );
+      if (!result.ok) {
+        if (result.code === "DUPLICATE") setDuplicate(true);
+
+        // The server validates independently. When it names fields, show the
+        // messages against the inputs and go to the step that owns the first
+        // one; a banner alone leaves the applicant nothing to act on.
+        const fields = mapServerFields(result.fields);
+        const keys = Object.keys(fields);
+        if (keys.length > 0) {
+          setErrors(fields);
+          const target = stepForFields(keys);
+          setDirection(target > step ? "forward" : "back");
+          setStep(target);
+          focusFirstError();
+          return;
         }
+
+        setSubmitError(result.error);
         return;
       }
 
@@ -336,53 +330,53 @@ export default function RecruitmentPage() {
                 place it cost ~700px above the form on every later step, which
                 is most of the scroll distance to the payment fields. */}
             {step === 1 && !submitted ? (
-            <header className="flex flex-col gap-8">
-              <a
-                href="https://iecse-manipal.com"
-                className="flex w-fit items-center gap-2 rounded-sm border border-line px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted transition-colors duration-200 hover:border-line-strong hover:text-paper"
-              >
-                <Home size={14} strokeWidth={2} aria-hidden="true" />
-                Club site
-              </a>
+              <header className="flex flex-col gap-8">
+                <a
+                  href="https://iecse-manipal.com"
+                  className="flex w-fit items-center gap-2 rounded-sm border border-line px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted transition-colors duration-200 hover:border-line-strong hover:text-paper"
+                >
+                  <Home size={14} strokeWidth={2} aria-hidden="true" />
+                  Club site
+                </a>
 
-              <div className="flex flex-col gap-5">
-                <h1 className="font-display text-[40px] font-semibold leading-[0.95] tracking-[-0.035em] text-paper sm:text-[54px] lg:text-[64px]">
-                  Apply to{" "}
-                  <img
-                    src={wordmark}
-                    alt="IECSE"
-                    className="ml-2 inline-block h-[0.92em] w-auto translate-y-[0.04em] align-baseline"
-                  />
-                </h1>
-                <p className="max-w-[42ch] text-[17px] leading-relaxed text-muted">
-                  The computer science club at MIT Manipal. Workshops, real
-                  projects, and a room full of people who build things.
-                  Applications for this year are open to first and second years.
-                </p>
+                <div className="flex flex-col gap-5">
+                  <h1 className="font-display text-[40px] font-semibold leading-[0.95] tracking-[-0.035em] text-paper sm:text-[54px] lg:text-[64px]">
+                    Apply to{" "}
+                    <img
+                      src={wordmark}
+                      alt="IECSE"
+                      className="ml-2 inline-block h-[0.92em] w-auto translate-y-[0.04em] align-baseline"
+                    />
+                  </h1>
+                  <p className="max-w-[42ch] text-[17px] leading-relaxed text-muted">
+                    The computer science club at MIT Manipal. Workshops, real
+                    projects, and a room full of people who build things.
+                    Applications for this year are open to first and second years.
+                  </p>
 
-                <p className="font-statement mt-2 flex flex-wrap items-baseline gap-x-3 text-[26px] uppercase leading-none tracking-[0.06em] text-paper sm:text-[32px]">
-                  <span>Join.</span>
-                  <span>Contribute.</span>
-                  <span className="text-cyan">Create impact.</span>
-                </p>
-              </div>
+                  <p className="font-statement mt-2 flex flex-wrap items-baseline gap-x-3 text-[26px] uppercase leading-none tracking-[0.06em] text-paper sm:text-[32px]">
+                    <span>Join.</span>
+                    <span>Contribute.</span>
+                    <span className="text-cyan">Create impact.</span>
+                  </p>
+                </div>
 
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[11px] uppercase tracking-[0.12em] text-faint">
-                <span className="flex items-center gap-2">
-                  <Clock size={13} strokeWidth={2} aria-hidden="true" />
-                  About 6 minutes
-                </span>
-                {savedAt > 0 && !submitted && (
-                  <span
-                    className="saved-flash flex items-center gap-2 text-cyan"
-                    aria-hidden="true"
-                  >
-                    <Check size={13} strokeWidth={2.5} aria-hidden="true" />
-                    Draft saved
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[11px] uppercase tracking-[0.12em] text-faint">
+                  <span className="flex items-center gap-2">
+                    <Clock size={13} strokeWidth={2} aria-hidden="true" />
+                    About 6 minutes
                   </span>
-                )}
-              </div>
-            </header>
+                  {savedAt > 0 && !submitted && (
+                    <span
+                      className="saved-flash flex items-center gap-2 text-cyan"
+                      aria-hidden="true"
+                    >
+                      <Check size={13} strokeWidth={2.5} aria-hidden="true" />
+                      Draft saved
+                    </span>
+                  )}
+                </div>
+              </header>
             ) : (
               <header className="flex items-center justify-between gap-4 border-b border-line pb-6">
                 <a href="https://iecse-manipal.com" className="shrink-0">
@@ -409,9 +403,8 @@ export default function RecruitmentPage() {
 
             <main
               ref={cardRef}
-              className={`scroll-mt-[72px] lg:scroll-mt-8 ${
-                step === 1 && !submitted ? "mt-14 lg:mt-16" : "mt-8"
-              }`}
+              className={`scroll-mt-[72px] lg:scroll-mt-8 ${step === 1 && !submitted ? "mt-14 lg:mt-16" : "mt-8"
+                }`}
             >
               {submitted ? (
                 <Success form={form} />
@@ -456,13 +449,7 @@ export default function RecruitmentPage() {
                     </p>
                   )}
 
-                  {!isConfigured && (
-                    <p className="mt-8 rounded-sm border border-line px-4 py-3 text-[13px] leading-relaxed text-faint">
-                      Running without Supabase credentials. Set
-                      VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to
-                      enable submission.
-                    </p>
-                  )}
+
 
                   <div className="mt-12 flex flex-col-reverse gap-3 border-t border-line pt-7 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                     {step > 1 ? (

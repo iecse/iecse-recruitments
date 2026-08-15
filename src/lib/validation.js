@@ -25,8 +25,15 @@ function validateIdentity(form) {
 
   if (isBlank(form.registrationNumber)) {
     errors.registrationNumber = "Enter your registration number.";
-  } else if (!DIGITS_ONLY.test(form.registrationNumber.trim())) {
-    errors.registrationNumber = "Registration numbers are digits only.";
+  } else {
+    const reg = form.registrationNumber.trim();
+    if (!DIGITS_ONLY.test(reg)) {
+      errors.registrationNumber = "Registration numbers are digits only.";
+    } else if (reg.length < 9) {
+      // The server enforces the same floor. Catching it here keeps the
+      // applicant from finding out on the last screen.
+      errors.registrationNumber = "That is too short. Registration numbers are 9 digits.";
+    }
   }
 
   if (!form.year) errors.year = "Select your year.";
@@ -40,8 +47,13 @@ function validateIdentity(form) {
 
   if (isBlank(form.phoneNumber)) {
     errors.phoneNumber = "Enter your phone number.";
-  } else if (!TEN_DIGITS.test(form.phoneNumber.trim())) {
-    errors.phoneNumber = "Phone numbers are exactly 10 digits.";
+  } else {
+    const phone = form.phoneNumber.trim();
+    if (!TEN_DIGITS.test(phone)) {
+      errors.phoneNumber = "Phone numbers are exactly 10 digits.";
+    } else if (!/^[6-9]/.test(phone)) {
+      errors.phoneNumber = "Indian phone numbers start with 6, 7, 8, or 9.";
+    }
   }
 
   return errors;
@@ -84,7 +96,6 @@ function validateEvidence(form) {
 
 function validateTier(form) {
   const errors = {};
-
   if (!form.tier) {
     errors.tier = "Choose how involved you want to be.";
     return errors;
@@ -94,7 +105,6 @@ function validateTier(form) {
   if (!isTierAllowed(form.tier, form.year)) {
     errors.tier = "That option is not open to your year. Pick another.";
   }
-
   return errors;
 }
 
