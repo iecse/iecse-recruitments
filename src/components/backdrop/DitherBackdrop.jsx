@@ -130,6 +130,7 @@ uniform sampler2D fluidField;
 uniform float fluidDrag;
 uniform sampler2D sealField;
 uniform float sealScale;
+uniform vec2 sealCenter;
 uniform float sealMix;
 
 vec4 mod289(vec4 x) { return x - floor(x * (1.0/289.0)) * 289.0; }
@@ -200,7 +201,14 @@ void main() {
   // The applicant's own mark, blown up to fill the viewport. The fluid warps
   // where it is sampled, so stirring the field distorts the mark rather than
   // sliding a highlight across it.
-  vec2 markUv = (screenUv - 0.5) * vec2(aspect, 1.0) / sealScale;
+  // sealScale is the mark's height as a fraction of the viewport, so smaller
+  // is smaller. It used to be larger than 1, which meant the glyph was bigger
+  // than the screen and only ever showed one arc of itself.
+  //
+  // sealCenter is where it sits. Centring on the viewport put it behind the
+  // form, which covers most of the width on a desktop, so the only part on
+  // show was whatever escaped past the right edge of the card.
+  vec2 markUv = (screenUv - sealCenter) * vec2(aspect, 1.0) / sealScale;
   markUv -= fluid.rg * fluidDrag * 1.4;
   markUv += 0.5;
   float mark = 0.0;
@@ -220,7 +228,12 @@ void main() {
   // The floor only has to clear the bias on the dither's upper thresholds, so
   // the darkest areas read as sparse deep water. 0.15 cleared far too many of
   // them and the whole field came out busy.
-  float value = 0.105 + f * (0.22 + (1.0 - sealMix) * 0.26) + mark * sealMix * (0.66 + f * 0.5);
+  // The noise has to carry the frame on its own now. It did not before: the
+  // old mark was an 11x11 blob covering most of the viewport, so most of what
+  // looked like "the field" was actually the mark. A real glyph occupies far
+  // less area, and with the ground this low everything outside it went dark.
+  float ground = 0.13 + f * (0.30 + (1.0 - sealMix) * 0.22);
+  float value = ground + mark * sealMix * (0.80 + f * 0.5);
 
   // The wake is a blend toward the hot end of the same ramp, and nothing is
   // added on top. The old additive term let dye push the result past 1.0, and
@@ -360,7 +373,12 @@ const COMPACT = {
   splatRadius: 0.02,
   splatForce: 0.9,
   drag: 0.55,
-  sealScale: 1.5,
+  // A square glyph sized off the viewport HEIGHT is wider than a phone. At
+  // 0.66 on a 390x844 screen the mark ran off both edges. Sized to sit in the
+  // strip above the sheet instead, which is the only part of the field a phone
+  // shows for more than a moment.
+  sealScale: 0.34,
+  sealCenter: [0.5, 0.13],
   maxDpr: 1,
 };
 
@@ -375,7 +393,11 @@ const FULL = {
   splatRadius: 0.012,
   splatForce: 1.25,
   drag: 0.8,
-  sealScale: 1.15,
+  // Sized and placed for the band the layout actually leaves free: the sheet
+  // takes the left of a wide viewport and the rail card the top right, so the
+  // mark sits below and left of the card and stops short of the right edge.
+  sealScale: 0.68,
+  sealCenter: [0.74, 0.56],
   maxDpr: 1,
 };
 
@@ -547,6 +569,7 @@ export default function DitherBackdrop({
         fluidDrag: { value: quality.drag },
         sealField: { value: sealTexture },
         sealScale: { value: quality.sealScale },
+        sealCenter: { value: new Vec2(quality.sealCenter[0], quality.sealCenter[1]) },
         sealMix: { value: 0.35 },
       },
     });
