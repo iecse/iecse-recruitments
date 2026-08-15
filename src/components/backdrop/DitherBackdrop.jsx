@@ -207,9 +207,14 @@ void main() {
 
   // Noise is the developer bath, the mark is the latent image. sealMix rises
   // with application progress, so the picture comes up as the form fills.
-  // Small ambient floor: enough that the gaps between mark cells read as deep
-  // water rather than dead black, not so much that the whole frame glows.
-  float value = 0.06 + f * (0.27 + (1.0 - sealMix) * 0.32) + mark * sealMix * (0.72 + f * 0.55);
+  //
+  // The ambient floor was 0.06, which the retro pass then crushed to nothing:
+  // 0.06 of the deep blue is 0.04 on its strongest channel, and quantize()
+  // subtracts a bias larger than that before it steps. Whole regions came out
+  // dead black, so a pointer crossing them had no field left to disturb. 0.15
+  // clears the bias on the dither's upper thresholds and not its lower ones,
+  // which is what makes a sparse floor rather than a grey wash.
+  float value = 0.15 + f * (0.27 + (1.0 - sealMix) * 0.32) + mark * sealMix * (0.72 + f * 0.55);
 
   // The wake is a blend toward the hot end of the same ramp, and nothing is
   // added on top. The old additive term let dye push the result past 1.0, and
@@ -237,6 +242,15 @@ uniform float focusRadius;
 uniform float focusStrength;
 uniform float progress;
 uniform vec2 resolution;
+
+/* Subtracted before stepping. It is what keeps the field sparse and saturated
+   instead of a grey wash.
+   Weighted per channel rather than flat. A flat bias low enough to keep the
+   dark blue floor alive also let red round up to a whole step on its own, and
+   a cell with red and blue lit but no green is purple: a third hue the club
+   does not have. Red is crushed hardest, green sits in the middle for the cyan
+   end of the ramp, blue is barely touched so the floor survives. */
+const vec3 BIAS = vec3(0.26, 0.13, 0.07);
 uniform sampler2D inputBuffer;
 varying vec2 vUv;
 
@@ -257,7 +271,7 @@ vec3 quantize(vec2 uv, vec3 color, float pixelSize) {
   float threshold = bayer8(scaledCoord) - 0.25;
   float stepSize = 1.0 / (colorNum - 1.0);
   color += threshold * stepSize;
-  color = clamp(color - 0.2, 0.0, 1.0);
+  color = clamp(color - BIAS, 0.0, 1.0);
   return floor(color * (colorNum - 1.0) + 0.5) / (colorNum - 1.0);
 }
 
@@ -621,8 +635,18 @@ export default function DitherBackdrop({
     };
     canvas.addEventListener("webglcontextlost", onContextLost);
 
+    // Once a drag turns into a scroll the browser fires pointercancel and the
+    // pointermove stream stops, so on a phone the field would go inert exactly
+    // when the applicant is moving. touchmove keeps arriving through a scroll.
+    const onTouchMove = (event) => {
+      const touch = event.touches && event.touches[0];
+      if (!touch) return;
+      onMove(touch);
+    };
+
     window.addEventListener("pointermove", onMove, { passive: true });
     window.addEventListener("pointerdown", onDown, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
     window.addEventListener("iecse:impulse", onImpulse);
     document.addEventListener("focusin", onFocusIn);
     document.addEventListener("focusout", onFocusOut);
@@ -679,9 +703,9 @@ export default function DitherBackdrop({
         );
         pointer.previous.copy(pointer.uv);
         pointer.moved = false;
-        if (pointer.velocity.squaredLen() > 0.0004) {
-          pointer.activeUntil = time + 3;
-        }
+        // Any movement counts. The old threshold ignored slow travel, so
+        // easing the cursor into place left the field inert.
+        pointer.activeUntil = time + 1.4;
       } else {
         pointer.velocity.multiply(0.86);
       }
@@ -690,13 +714,15 @@ export default function DitherBackdrop({
 
       if (running) {
         const fu = fluidProgram.uniforms;
-        // Injection scales with how fast the pointer is actually travelling.
-        // A time window instead of a speed made a parked cursor keep pumping
-        // dye in, which drifted the whole field off the brand ramp.
-        const speed = live
-          ? Math.hypot(pointer.velocity.x, pointer.velocity.y)
+        // Presence with a floor, not speed alone. Scaling purely by speed meant
+        // a cursor moved slowly onto a spot injected almost nothing and the
+        // field did not answer, which reads as a dead patch. The floor makes it
+        // respond wherever the pointer is; the idle window is what stops a
+        // parked cursor pumping dye in forever and drifting off the ramp.
+        const speed = Math.hypot(pointer.velocity.x, pointer.velocity.y);
+        fu.uPointerActive.value = pointerLive
+          ? Math.min(1, 0.45 + speed * 0.7)
           : 0;
-        fu.uPointerActive.value = Math.min(1, speed * 0.9);
         fu.uPrevious.value = fluidRead.texture;
         fu.uPointer.value.copy(pointer.uv);
         fu.uPointerVelocity.value.copy(pointer.velocity);
@@ -777,6 +803,7 @@ export default function DitherBackdrop({
       visibilityObserver.disconnect();
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("iecse:impulse", onImpulse);
       document.removeEventListener("focusin", onFocusIn);
       document.removeEventListener("focusout", onFocusOut);

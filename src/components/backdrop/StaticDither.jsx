@@ -4,10 +4,11 @@ import { SEAL_GRID, buildSeal } from "../../lib/seal";
 /**
  * The dithered field, drawn once to a 2D canvas.
  *
- * Phones do not get the WebGL version: 257 KB gzip of three.js is not a fair
- * trade for a decorative background on campus wifi. But they should not get a
- * flat gradient either, so this reproduces the same look with nothing but the
- * canvas API already in the browser.
+ * Phones do get the WebGL version now that it runs on OGL. This is the
+ * fallback for the cases that still cannot: reduced motion, no WebGL2, no
+ * float render targets, or a context the driver took back. It reproduces the
+ * same look with nothing but the canvas API already in the browser, so those
+ * applicants see the same field, only still.
  *
  * Same inputs as the shader, so the two read as one design: the applicant's
  * seal, an 8x8 bayer threshold, and the deep blue to cyan ramp. The only thing
@@ -29,7 +30,11 @@ const BAYER = [
 /* The shader ramp, and the same constants its retro pass uses. */
 const WAVE = [0.11, 0.26, 0.68];
 const COLOR_NUM = 3.4;
-const BIAS = 0.2;
+/* Matches the retro pass, per channel. A flat bias low enough to keep the dark
+   blue floor alive also let red round up on its own, and red plus blue with no
+   green is purple: a hue the club does not have. Red crushed hardest, blue
+   barely touched so the floor survives. */
+const BIAS = [0.26, 0.13, 0.07];
 
 /**
  * Pixel size of one dither cell on screen, matched to the shader resting grid
@@ -96,7 +101,7 @@ function drawField(canvas, seed, cssWidth, cssHeight) {
         valueNoise(u * 5 * aspect, v * 5) * 0.6 +
         valueNoise(u * 11 * aspect, v * 11) * 0.4;
 
-      value += 0.06 + noise * 0.42;
+      value += 0.15 + noise * 0.42;
 
       /*
        * The shader quantises per channel, after subtracting a bias. That bias
@@ -112,7 +117,7 @@ function drawField(canvas, seed, cssWidth, cssHeight) {
       for (let channel = 0; channel < 3; channel += 1) {
         let c = WAVE[channel] * value;
         c += threshold * stepSize;
-        c = Math.max(0, Math.min(1, c - BIAS));
+        c = Math.max(0, Math.min(1, c - BIAS[channel]));
         c = Math.round(c * (COLOR_NUM - 1)) / (COLOR_NUM - 1);
         image.data[index + channel] = Math.min(255, c * 255);
       }
