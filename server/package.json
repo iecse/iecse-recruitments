@@ -1,0 +1,24 @@
+{
+  "name": "iecse-recruitment-server",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch index.js",
+    "start": "node index.js",
+    "init:pg": "node init-pg.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.1.0",
+    "pg": "^8.16.0",
+    "sanitize-html": "^2.17.7"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

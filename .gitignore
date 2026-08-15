@@ -14,6 +14,13 @@ dist-ssr
 .env
 .env.local
 
+# Server
+server/.env
+server/db/*.db
+server/db/*.db-wal
+server/db/*.db-shm
+server/node_modules
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

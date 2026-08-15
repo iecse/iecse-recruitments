@@ -10,6 +10,12 @@ export default defineConfig({
   // explicitly. Falls back to the Vite default when PORT is unset.
   server: {
     port: process.env.PORT ? Number(process.env.PORT) : undefined,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
   },
   plugins: [
     react(),
