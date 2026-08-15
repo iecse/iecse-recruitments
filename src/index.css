@@ -178,8 +178,12 @@ input:-webkit-autofill:focus {
     animation: rise-in 620ms var(--ease-out-soft) both;
   }
 
+  /* Short on purpose. The static field underneath and the live one are the
+     same design, so a long crossfade between two near identical images does
+     not read as an entrance, it reads as the page sitting still and then
+     starting. Long enough to cover the difference in their noise, no more. */
   .field-in {
-    animation: field-in 600ms ease-out both;
+    animation: field-in 220ms ease-out both;
   }
 
   .step-forward {

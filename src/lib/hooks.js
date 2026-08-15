@@ -139,8 +139,13 @@ export function useHashStep(step, setStep, max) {
  * reports idle before it has painted anything, which is exactly the moment
  * this is trying to stay out of. Two frames first, which is a painted frame,
  * and only then ask for idle. The static field covers the gap.
+ *
+ * The timeout is deliberately short. Staying out of first paint needs one
+ * frame, not a free main thread: waiting for real idle on a busy phone put a
+ * visible pause between the page arriving and the field starting, which reads
+ * as two separate loads rather than one.
  */
-export function useIdleMount({ timeout = 1200 } = {}) {
+export function useIdleMount({ timeout = 180 } = {}) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -153,7 +158,7 @@ export function useIdleMount({ timeout = 1200 } = {}) {
       if (typeof window.requestIdleCallback === "function") {
         idleHandle = window.requestIdleCallback(() => setReady(true), { timeout });
       } else {
-        timer = setTimeout(() => setReady(true), 300);
+        timer = setTimeout(() => setReady(true), 120);
       }
     };
 

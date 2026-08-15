@@ -37,11 +37,18 @@ function hasWebGL() {
   }
 }
 
-function StaticField({ seed }) {
+/**
+ * The ground. `dithered` draws the full still version of the field on top of
+ * it, which is right when the shader is never going to run, and wrong while
+ * it is merely on its way: a still copy of the same picture followed by the
+ * live one reads as the page freezing and then starting, rather than as one
+ * thing arriving. Waiting shows the ground alone.
+ */
+function StaticField({ seed, dithered = true }) {
   return (
     <div aria-hidden="true" className="absolute inset-0">
       <div className="absolute inset-0" style={{ background: STATIC_FIELD }} />
-      <StaticDither seed={seed} />
+      {dithered && <StaticDither seed={seed} />}
     </div>
   );
 }
@@ -67,8 +74,10 @@ export default function Backdrop({ progress, seed = "iecse", allowShader = true 
   // already on screen, so nothing is missing in the meantime.
   const idle = useIdleMount();
 
-  const showShader =
-    allowShader && idle && webgl && !reducedMotion && !gpuRefused;
+  const canRunShader = allowShader && webgl && !reducedMotion && !gpuRefused;
+  const showShader = canRunShader && idle;
+  // Able to run it, just not yet. Distinct from never going to run it.
+  const waiting = canRunShader && !idle;
 
   return (
     <div
@@ -76,7 +85,7 @@ export default function Backdrop({ progress, seed = "iecse", allowShader = true 
       className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
     >
       {showShader ? (
-        <Suspense fallback={<StaticField seed={seed} />}>
+        <Suspense fallback={<StaticField seed={seed} dithered={false} />}>
           <div className="field-in absolute inset-0">
           <DitherBackdrop
             progress={progress}
@@ -89,7 +98,11 @@ export default function Backdrop({ progress, seed = "iecse", allowShader = true 
           </div>
         </Suspense>
       ) : (
-        <StaticField seed={seed} />
+        // Only dither the still version when the shader is genuinely not
+        // coming: reduced motion, no WebGL2, no float targets, a lost context,
+        // or a caller that said not to. While it is merely still loading,
+        // `waiting` is true and this is the ground on its own.
+        <StaticField seed={seed} dithered={!waiting} />
       )}
 
       {/* The field owns this pane, so the only treatment is a feather where it
