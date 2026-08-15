@@ -19,6 +19,7 @@ import {
   STORAGE_KEY,
   isTierAllowed,
   mapServerFields,
+  paysOnApplication,
   stepForFields,
   stepsForTier,
   toApplicationPayload,
@@ -96,6 +97,10 @@ export default function RecruitmentPage() {
   const sealSeed = hasIdentity ? form.registrationNumber.trim() : "iecse";
   // Step 5 reads as "Payment" for members and "Submit" for interview tiers.
   const steps = stepsForTier(form.tier);
+  // Interview tiers are not asked for the fee unless they are selected. The
+  // payment step and the confirmation both say so; the header and the rail
+  // were stating it flatly on every screen and contradicting them.
+  const paysNow = paysOnApplication(form.tier) || !form.tier;
   const active = steps.find((entry) => entry.id === step) || steps[0];
 
   /* ----------------------------------------------------------------- state */
@@ -386,7 +391,10 @@ export default function RecruitmentPage() {
                   {/* Not uppercased with the rest of the row. Rs is a currency
                       abbreviation, not an acronym, and RS 250 reads as neither
                       rupees nor anything else. */}
-                  <span className="normal-case">Rs {MEMBERSHIP_FEE}</span>
+                  <span className="normal-case">
+                    Rs {MEMBERSHIP_FEE}
+                    {!paysNow && " if selected"}
+                  </span>
                   <span aria-hidden="true">/</span>
                   <span>
                     Step {submitted ? LAST_STEP : step} of {LAST_STEP}
@@ -500,7 +508,12 @@ export default function RecruitmentPage() {
                    would otherwise scroll back up to check. */
                 <dl className="flex flex-col gap-4 rounded-md border border-line bg-ink/95 p-5">
                   {[
-                    ["Membership", `Rs ${MEMBERSHIP_FEE} for the year`],
+                    [
+                      "Membership",
+                      paysNow
+                        ? `Rs ${MEMBERSHIP_FEE} for the year`
+                        : `Rs ${MEMBERSHIP_FEE} for the year, only if selected`,
+                    ],
                     ["Steps", `${LAST_STEP}, saved as you go`],
                     ["Time", "About 6 minutes"],
                     ["Payment", "Checked by hand, a few days"],
