@@ -35,11 +35,11 @@ export default function Success({ form }) {
     needsInterview
       ? {
           title: "You get an interview slot",
-          body: `${tier ? tier.name : "This tier"} needs a short conversation about your domains. We will mail ${form.learnerEmail.trim()}. The Rs ${MEMBERSHIP_FEE} fee is only asked for if you are selected.`,
+          body: `${tier ? tier.name : "This tier"} needs a short conversation about your domains. We will contact you via WhatsApp at ${form.phoneNumber.trim()}. The Rs ${MEMBERSHIP_FEE} fee is only asked for if you are selected.`,
         }
       : {
           title: "You are on the list",
-          body: `Member applications need no interview. Watch ${form.learnerEmail.trim()} for the welcome mail.`,
+          body: `Member applications need no interview. Watch your WhatsApp at ${form.phoneNumber.trim()} for the welcome message.`,
         },
     {
       title: "Sessions start",

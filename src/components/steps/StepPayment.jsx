@@ -150,7 +150,7 @@ export default function StepPayment({ form, errors, update, onToggleConfirm }) {
             aria-hidden="true"
           />
           <p className="text-[13px] leading-relaxed text-faint">
-            You will be contacted at {form.learnerEmail.trim() || "your email"}
+            You will be contacted via WhatsApp at {form.phoneNumber.trim() || "your phone number"}
             {" "}to schedule a short conversation about the domains you picked.
             Nothing else is needed from you until then.
           </p>

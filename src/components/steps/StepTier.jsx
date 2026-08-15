@@ -25,13 +25,19 @@ export default function StepTier({ form, errors, update }) {
       <div className="flex flex-col gap-3">
         {tiers.map((tier) => {
           const active = selected === tier.value;
+          const disabled =
+            (form.year === "1st Year" && tier.value === "mancomm") ||
+            (form.year === "2nd Year" && tier.value === "workcomm");
+
           return (
             <label
               key={tier.value}
-              className={`relative flex cursor-pointer gap-4 overflow-hidden rounded-md border p-5 transition-all duration-300 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-cyan has-[:focus-visible]:outline-offset-2 ${
-                active
-                  ? "border-cyan/55 bg-cyan/[0.06]"
-                  : "border-line bg-surface hover:border-line-strong hover:bg-surface-strong"
+              className={`relative flex gap-4 overflow-hidden rounded-md border p-5 transition-all duration-300 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-cyan has-[:focus-visible]:outline-offset-2 ${
+                disabled
+                  ? "cursor-not-allowed opacity-40 border-line bg-surface"
+                  : active
+                  ? "cursor-pointer border-cyan/55 bg-cyan/[0.06]"
+                  : "cursor-pointer border-line bg-surface hover:border-line-strong hover:bg-surface-strong"
               }`}
             >
               {/* Accent spine, the only thing that moves on selection. */}
@@ -46,7 +52,8 @@ export default function StepTier({ form, errors, update }) {
                 type="radio"
                 name="tier"
                 value={tier.value}
-                checked={active}
+                checked={active && !disabled}
+                disabled={disabled}
                 onChange={update("tier")}
                 className="sr-only"
               />
