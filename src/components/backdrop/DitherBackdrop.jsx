@@ -816,12 +816,17 @@ export default function DitherBackdrop({
         quality.colorNumEnd,
         resolved
       );
-      // Chunky on arrival, settling to the working grid as the intro plays.
-      // Was 2.4x over 1.6s, which arrived as a slab of enormous blocks and
-      // took long enough to resolve that it read as the page struggling.
-      du.pixelSizeCoarse.value =
-        lerp(quality.coarse, quality.coarse * 0.72, resolved) *
-        lerp(1.45, 1, intro);
+      // The grid does not animate. It used to open chunky and settle, and to
+      // tighten again as the form filled, but the cell size is snapped to whole
+      // pixels now, so a continuous ramp becomes a staircase: 23, 22, 21 ... 16
+      // is eight whole field re dices inside one second, and the eye reads that
+      // as the page running at about ten frames a second. It is not; the frames
+      // are all there, they just all look the same until the grid jumps.
+      //
+      // The resolve is carried by things that can move continuously without
+      // moving a cell boundary: the level count, the mark developing, and the
+      // colour warming from deep blue toward cyan.
+      du.pixelSizeCoarse.value = quality.coarse;
       du.focusStrength.value = smoothedFocus * quality.focusStrength;
       du.focusCenter.value.lerp(anchor, k);
 
