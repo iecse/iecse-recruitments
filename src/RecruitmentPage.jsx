@@ -511,8 +511,8 @@ export default function RecruitmentPage() {
                     [
                       "Membership",
                       paysNow
-                        ? `Rs ${MEMBERSHIP_FEE} for the year`
-                        : `Rs ${MEMBERSHIP_FEE} for the year, only if selected`,
+                        ? `Rs ${MEMBERSHIP_FEE}`
+                        : `Rs ${MEMBERSHIP_FEE}, only if selected`,
                     ],
                     ["Steps", `${LAST_STEP}, saved as you go`],
                     ["Time", "About 6 minutes"],

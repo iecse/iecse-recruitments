@@ -135,8 +135,8 @@ export default function Success({ form }) {
         </a>
         <p className="text-[12px] leading-relaxed text-faint">
           {paid
-            ? `Membership is Rs ${MEMBERSHIP_FEE} for the year and covers everything the club runs.`
-            : `If you are selected, membership is Rs ${MEMBERSHIP_FEE} for the year and covers everything the club runs.`}
+            ? `Membership is Rs ${MEMBERSHIP_FEE} and covers everything the club runs.`
+            : `If you are selected, membership is Rs ${MEMBERSHIP_FEE} and covers everything the club runs.`}
         </p>
       </div>
     </div>

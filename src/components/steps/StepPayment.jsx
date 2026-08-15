@@ -182,7 +182,7 @@ export default function StepPayment({ form, errors, update, onToggleConfirm }) {
         </div>
 
         <p className="mt-4 border-t border-line pt-4 text-[13px] leading-relaxed text-muted">
-          One payment covers the year. Pay to either account below, then put the
+          One payment, once. Pay to either account below, then put the
           transaction reference in the field underneath so we can match it to
           your application.
         </p>
