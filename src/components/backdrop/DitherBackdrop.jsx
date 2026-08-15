@@ -272,20 +272,42 @@ float bayer2(vec2 a) {
 #define bayer4(a) (bayer2(0.5 * (a)) * 0.25 + bayer2(a))
 #define bayer8(a) (bayer4(0.5 * (a)) * 0.25 + bayer2(a))
 
-vec3 quantize(vec2 uv, vec3 color, float pixelSize) {
-  vec2 scaledCoord = floor(uv * resolution / pixelSize);
+/* Both grids are snapped to whole device pixels and the level count to whole
+   steps. That is most of the flicker.
+
+   pixelSize is animated, so at a fractional value the cell boundaries land
+   mid pixel and slide as it changes: every cell re dices its own edges frame
+   to frame. colorNum is lerped continuously too, so stepSize was never the
+   same two frames running and every cell kept re rounding to a different
+   level. Both now change in discrete jumps, rarely, instead of drifting
+   constantly. */
+float gridOf(float pixelSize) {
+  return max(1.0, floor(pixelSize + 0.5));
+}
+
+float levelsOf() {
+  return max(2.0, floor(colorNum + 0.5));
+}
+
+vec3 quantize(vec2 uv, vec3 color, float grid) {
+  vec2 scaledCoord = floor(uv * resolution / grid);
   float threshold = bayer8(scaledCoord) - 0.25;
-  float stepSize = 1.0 / (colorNum - 1.0);
+  float levels = levelsOf();
+  float stepSize = 1.0 / (levels - 1.0);
   color += threshold * stepSize;
   color = clamp(color - BIAS, 0.0, 1.0);
-  return floor(color * (colorNum - 1.0) + 0.5) / (colorNum - 1.0);
+  return floor(color * (levels - 1.0) + 0.5) / (levels - 1.0);
 }
 
 vec3 sampleAtGrid(vec2 uv, float pixelSize) {
-  vec2 normalizedPixelSize = pixelSize / resolution;
-  vec2 uvPixel = normalizedPixelSize * floor(uv / normalizedPixelSize);
+  float grid = gridOf(pixelSize);
+  vec2 cell = grid / resolution;
+  // Sample the middle of the cell, not its corner. On the corner the lookup
+  // sits exactly on the boundary between two texels and linear filtering
+  // flips it between them under the smallest movement.
+  vec2 uvPixel = cell * (floor(uv / cell) + 0.5);
   vec3 color = texture2D(inputBuffer, uvPixel).rgb;
-  return quantize(uv, color, pixelSize);
+  return quantize(uv, color, grid);
 }
 
 void main() {
@@ -767,7 +789,9 @@ export default function DitherBackdrop({
       wu.waveAmplitude.value = lerp(0.42, 0.55, resolved);
       // Latent at the start, fully developed by submission.
       wu.sealMix.value = lerp(0.3, 1, resolved) * intro;
-      wu.waveSpeed.value = running ? lerp(0.05, 0.075, resolved) : 0;
+      // Halved. This sets how fast the noise carries cells across their
+      // dither threshold, which is the rest of the flicker.
+      wu.waveSpeed.value = running ? lerp(0.024, 0.036, resolved) : 0;
 
       const focusLive = Boolean(focusedEl && focusedEl.isConnected);
 
