@@ -11,9 +11,15 @@ export default defineConfig({
   server: {
     port: process.env.PORT ? Number(process.env.PORT) : undefined,
     proxy: {
+      // The API is a Supabase Edge Function. `npm run dev:api` runs that exact
+      // function locally on 8000 through Deno, so development and production
+      // execute the same code rather than two implementations that agree by
+      // hand. In production VITE_API_BASE points at the deployed function and
+      // this proxy is not involved at all.
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:8000',
         changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
   },

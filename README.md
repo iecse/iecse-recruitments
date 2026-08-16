@@ -8,55 +8,36 @@ reconciles rows by hand.
 
 ## Running it
 
-Two processes. Both need to be up: the frontend proxies `/api` to the server.
+Two processes. The page proxies `/api` to the function, so both must be up.
 
 ```bash
 npm install && npm run dev
 ```
 
 ```bash
-cd server && npm install && npm run dev
+npm run dev:api
 ```
 
-The frontend comes up on 5173 (or the next free port, `autoPort` is on) and the
-API on 3001. With no configuration at all the server writes to a SQLite file at
-`server/db/iecse_recruitment.db`, created on first run. Nothing else is needed
-to work on the form locally.
+`dev:api` runs the Supabase Edge Function locally through Deno, on port 8000.
+This is the same file that runs in production, not a second implementation of
+it, so anything that works locally works deployed and anything broken is broken
+in both. It needs Deno on PATH and `supabase/.env.local` filled in; copy
+`supabase/.env.example` and take both values from Project Settings, API.
+
+There is no local database. The function talks to the real Supabase project,
+so be aware you are writing real rows while developing.
 
 ## Configuration
 
-There is no frontend `.env`. Every secret lives on the server.
+There is no frontend `.env` holding secrets, and there must never be: anything
+`VITE_` prefixed is compiled into the bundle and is public.
 
-Copy `server/.env.example` to `server/.env` and fill in what you need. It is
-gitignored. Storage is picked in this order:
-
-1. `SUPABASE_URL` + `SUPABASE_KEY` — writes through the Supabase REST API. Use
-   the **service role** key, not the publishable one: this runs server side, and
-   the service role is what lets the duplicate lookup read the table without
-   opening it to the public anon role.
-2. `DATABASE_URL` — PostgreSQL. Run `npm run init:pg` inside `server/` once to
-   create the table and indexes.
-3. Neither — SQLite, as above.
-
-Also read: `PORT` (default 3001) and `CORS_ORIGINS`, a comma separated list of
-production origins allowed to call the API. Localhost dev ports are always
-allowed and do not need listing.
-
-## API
-
-```
-POST /api/applications              submit; 201, or 400 { error, fields }, or 409 { error, code }
-GET  /api/applications/check/:regNo { taken: boolean }, fails open
-GET  /api/health                    { status, timestamp }
-```
-
-Server-side validation in `server/middleware/validate.js` is authoritative and
-does not trust the client. `src/lib/validation.js` mirrors its rules so an
-applicant finds out on the step that owns the field rather than at submit. If
-you change a rule, change both, or the form will pass locally and 400 on send.
-
-Rate limits per IP: 100 requests/minute globally, 3 submissions/hour, 10
-duplicate lookups/minute.
+| Variable | Where | Purpose |
+| --- | --- | --- |
+| `VITE_API_BASE` | frontend build | Absolute origin of the deployed function. Defaults to `/api` for the dev proxy. |
+| `SUPABASE_URL` | injected in production | Set locally in `supabase/.env.local`. |
+| `SUPABASE_SERVICE_ROLE_KEY` | injected in production | Set locally in `supabase/.env.local`. Bypasses row level security. |
+| `ALLOWED_ORIGINS` | `supabase secrets set` | Comma separated origins allowed to call the function. |
 
 ## Deploying
 
@@ -74,8 +55,7 @@ Once, in the club's Supabase project:
 supabase link --project-ref <ref>
 ```
 
-Run `server/db/supabase-schema.sql` then `supabase/rate-limit.sql` in the SQL
-editor. The second one is what makes rate limiting work: an edge function is
+Run `supabase/schema.sql` then `supabase/rate-limit.sql` in the SQL editor. The second one is what makes rate limiting work: an edge function is
 stateless and runs in as many instances as it likes, so a counter in memory
 limits one instance and nothing else.
 

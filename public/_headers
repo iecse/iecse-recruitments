@@ -1,0 +1,36 @@
+# Security headers for the static build.
+#
+# This file format is read by Cloudflare Pages and Netlify. It is copied into
+# the build output as-is and ignored by hosts that do not understand it, so it
+# is harmless if you deploy somewhere else. Firebase Hosting does NOT read it —
+# use firebase.json, which carries the same list.
+#
+# Whatever ends up serving this, the headers below need to be present. Check
+# with: curl -sI https://apply.iecse-manipal.com | sort
+#
+# Notes on the CSP, because a wrong one breaks the page silently:
+#   script-src has no 'unsafe-inline'. The Vite build emits no inline scripts,
+#     verified against dist/index.html, so it does not need it and should not
+#     have it.
+#   style-src does need 'unsafe-inline'. React sets element style attributes in
+#     five places, which CSP counts as inline styles.
+#   connect-src must include the Supabase project the API runs on. Without it
+#     every submission is blocked by the browser before it leaves.
+#   img-src needs data: for the canvas fallback, which draws to a data URL.
+
+/*
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=(), usb=()
+  Cross-Origin-Opener-Policy: same-origin
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'
+
+# Hashed filenames, so these can be cached hard.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# The entry point must never be cached, or a deploy does not reach anyone.
+/index.html
+  Cache-Control: no-cache

@@ -11,16 +11,16 @@ payment reference, for a real first year. That is the bar to keep in mind.
 Nowhere in this repository, and nowhere in its history. Verified by scanning
 the working tree and every commit for JWTs, `sb_secret_` keys, service role
 strings and Postgres connection URLs. The only match is the
-`postgresql://user:pass@host` placeholder in `server/.env.example`.
+`sb_secret_...` placeholder in `supabase/.env.example`.
 
 | Secret | Lives in | Ever reaches a browser |
 | --- | --- | --- |
-| `SUPABASE_KEY` (service role) | `server/.env` | no |
-| `SUPABASE_URL` | `server/.env` | no |
-| `DATABASE_URL` | `server/.env` | no |
+| `SUPABASE_SERVICE_ROLE_KEY` | injected by Supabase in production, `supabase/.env.local` locally | no |
+| `SUPABASE_URL` | same | no |
+| `ALLOWED_ORIGINS` | `supabase secrets set` | no |
 
-`server/.env` is gitignored. The frontend has no database client of any kind:
-it posts to `/api` and the server holds the credentials. There is no
+`supabase/.env.local` is gitignored. The frontend has no database client of
+any kind: it posts to the Edge Function, which holds the credentials. There is no
 `VITE_`-prefixed secret, because anything with that prefix is compiled into
 the bundle and is therefore public by definition.
 
@@ -30,7 +30,7 @@ authenticated role and its own policy, not this key.
 
 ## Database
 
-`server/db/supabase-schema.sql` creates the table with row level security on
+`supabase/schema.sql` creates the table with row level security on
 and no policies, plus an explicit `revoke all` from `anon` and
 `authenticated`. Default deny. The publishable key is a public value, so the
 table has to be safe in the hands of anyone holding it.
@@ -50,24 +50,25 @@ columns to start with.
 
 ## Input
 
-Every field is validated server side in `server/middleware/validate.js`, which
-is authoritative and does not trust the client. `src/lib/validation.js` mirrors
-it so applicants find out on the step that owns the field rather than at
-submit. **If you change a rule, change both**, or the form passes locally and
-400s on send.
+Every field is validated in `supabase/functions/_shared/validate.ts`, which is
+authoritative and does not trust the client. Both it and the browser import
+their patterns and bounds from `_shared/rules.ts`, so the two cannot drift:
+change a rule once and both follow. This used to be two hand-synchronised
+copies, which is how a form ends up passing locally and 400ing on send.
 
 - Allowlisted values for `year`, `tier` and `domain`. Anything else is refused.
 - Upper and lower bounds on every field, not just the free text ones. Without
   a ceiling, an anonymous endpoint lets a stranger choose how many bytes land
-  in the table, up to the 1mb body limit.
-- HTML is stripped from every string with `sanitize-html` before storage, so
-  nothing that reaches the database can be markup.
+  in the table.
+- Tags, stray angle brackets and control characters are stripped from every
+  string before storage, so nothing reaching the database can be markup.
 - `payment_status` and `interview_status` are derived on the server and
   overwritten regardless of what the client sends. The insert is built from an
   allowlist of keys, so extra fields in the request body are dropped rather
   than passed through.
-- Queries are parameterised. `server/db/pool.js` converts `?` placeholders to
-  `$n` for Postgres; no SQL is built by string concatenation anywhere.
+- No SQL is built by string concatenation anywhere. Writes go through the
+  Supabase client, which parameterises, and the one hand written function
+  (`bump_rate_limit`) takes typed arguments.
 
 React escapes interpolated content by default and nothing in the app uses
 `dangerouslySetInnerHTML`, so stored values cannot become markup on the way
@@ -82,50 +83,67 @@ far out of reach of a person filling the form honestly.
 
 | Scope | Limit |
 | --- | --- |
-| All endpoints | 300 / minute |
 | Submissions | 40 / 15 minutes |
 | Duplicate lookups | 30 / minute |
 
-Two traps worth knowing about, both of which silently disable the limiter:
+The counter lives in Postgres, not in memory, because an edge function is
+stateless and runs in as many instances as Supabase decides. A counter in a
+module variable would limit one instance and nothing else.
 
-- **`TRUST_PROXY` must match the deployment.** It defaults to `0`. Trusting a
-  proxy that is not there means `req.ip` comes from the `X-Forwarded-For`
-  header, which the client sends, so anyone can present a fresh identity on
-  every request. Set it to the number of proxies actually in front of the app.
-- **Do not add a custom `keyGenerator`.** The library's own normalises IPv6 to
-  a /56 block. One that returns `req.ip` raw looks equivalent and is not: a
-  single IPv6 allocation hands out more addresses than the limiter can count.
+**`supabase/rate-limit.sql` must actually have been run.** Without it the RPC
+does not exist, the limiter fails open, and there is no rate limiting at all.
+It fails open on purpose, since a broken limiter must never stop somebody
+applying, but it logs `RATE LIMITING IS NOT ACTIVE` loudly when it does. Check
+the function logs after deploying.
+
+Addresses are hashed before storage. Rate limiting does not need to know who
+anyone is, and a table of IP addresses beside a table of student names is worse
+to hold than either alone.
 
 ## Transport and headers
 
-`helmet` is applied to the API, which sets HSTS, `nosniff`, frame denial and
-referrer policy, and removes `x-powered-by`.
+The Edge Function sets `nosniff` and `no-store` on every response and handles
+CORS explicitly, allowing only origins named in `ALLOWED_ORIGINS` plus the dev
+ports. Supabase terminates TLS in front of it.
 
-**The static frontend needs the same treatment at its host, and does not have
-it yet**, because the deploy target is not decided. Whatever it lands on needs:
+The static frontend carries its own header config: `firebase.json` for Firebase
+Hosting and `public/_headers` for Cloudflare Pages or Netlify. Both set the same
+list. Change one, change the other, and verify after deploying with
+`curl -sI https://apply.iecse-manipal.com`. The policy is:
 
 ```
 Strict-Transport-Security: max-age=31536000; includeSubDomains
 X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
 Referrer-Policy: strict-origin-when-cross-origin
-Content-Security-Policy: default-src 'self'; img-src 'self' data:;
+Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=(), usb=()
+Cross-Origin-Opener-Policy: same-origin
+Content-Security-Policy: default-src 'self'; script-src 'self';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-  font-src https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'none'
+  font-src 'self' https://fonts.gstatic.com; img-src 'self' data:;
+  connect-src 'self' https://*.supabase.co; base-uri 'self'; form-action 'self';
+  frame-ancestors 'none'; object-src 'none'
 ```
 
-`CORS_ORIGINS` on the API must then list that origin. Localhost dev ports are
-always allowed and do not need listing.
+`script-src` has no `'unsafe-inline'`: the Vite build emits no inline scripts,
+checked against `dist/index.html`. `style-src` does need it, because React sets
+element style attributes in five places. `connect-src` must reach Supabase or
+every submission is blocked by the browser before it leaves.
+
+`ALLOWED_ORIGINS` on the function must then name the deployed origin. Localhost
+dev ports are always allowed and do not need listing.
 
 ## Dependencies
 
-`npm audit` reports zero vulnerabilities in both the frontend and the server.
-Re-run before each deploy; it is two commands and it is the cheapest check
-here.
+`npm audit` reports zero vulnerabilities in the frontend. Re-run before each
+deploy; it is one command and the cheapest check here.
 
 ```bash
 npm audit --omit=dev
-cd server && npm audit
 ```
+
+The Edge Function has one dependency, `@supabase/supabase-js`, pinned in
+`supabase/functions/deno.json`.
 
 ## Not applicable
 
@@ -143,7 +161,7 @@ care is not the rows, it is the committee reconciling them by hand. Turnstile
 or hCaptcha on the submit step is the fix and it is not done.
 
 **The duplicate check is an enumeration oracle.** `GET
-/api/applications/check/:regNo` answers whether a registration number has
+/applications/check/:regNo` answers whether a registration number has
 applied. Registration numbers are sequential, so at 30 lookups a minute
 somebody could work out who in their year has applied to the club. It exists
 so an applicant does not fill five screens before being told they already

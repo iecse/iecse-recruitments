@@ -1,0 +1,54 @@
+{
+  "//": "Firebase Hosting config for the recruitment page. The club site lives in its own repo and its own Hosting site; this deploys alongside it in the same project. Firebase does not read public/_headers, so the same header list is repeated here. Change one, change both.",
+  "hosting": {
+    "public": "dist",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      {
+        "//": "Single page app. Every path serves index.html so a refresh on a deep link does not 404. The form uses a hash for its step, so this mostly matters for anyone who mistypes a path.",
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "Strict-Transport-Security",
+            "value": "max-age=31536000; includeSubDomains"
+          },
+          { "key": "X-Content-Type-Options", "value": "nosniff" },
+          { "key": "X-Frame-Options", "value": "DENY" },
+          {
+            "key": "Referrer-Policy",
+            "value": "strict-origin-when-cross-origin"
+          },
+          {
+            "key": "Permissions-Policy",
+            "value": "geolocation=(), microphone=(), camera=(), payment=(), usb=()"
+          },
+          { "key": "Cross-Origin-Opener-Policy", "value": "same-origin" },
+          {
+            "//": "script-src has no 'unsafe-inline' because the Vite build emits no inline scripts. style-src needs it because React sets element style attributes. connect-src must name the Supabase project or every submission is blocked before it leaves the browser.",
+            "key": "Content-Security-Policy",
+            "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
+          }
+        ]
+      },
+      {
+        "source": "/assets/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000, immutable"
+          }
+        ]
+      },
+      {
+        "source": "/index.html",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      }
+    ]
+  }
+}

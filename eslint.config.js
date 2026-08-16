@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', 'server/node_modules']),
+  globalIgnores(['dist', 'supabase/functions']),
 
   // Browser: the Vite app.
   {
@@ -21,10 +21,11 @@ export default defineConfig([
     },
   },
 
-  // Node: the API server and the build config. These are not browser code and
-  // were failing on `process` under the browser globals.
+  // Node: the build config. Not browser code, so it fails on `process` under
+  // the browser globals. The Edge Function is Deno and TypeScript and is
+  // checked with `deno check`, not with this.
   {
-    files: ['server/**/*.js', 'vite.config.js', 'eslint.config.js'],
+    files: ['vite.config.js', 'eslint.config.js'],
     extends: [js.configs.recommended],
     languageOptions: {
       globals: globals.node,

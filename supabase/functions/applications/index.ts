@@ -98,11 +98,33 @@ async function overLimit(
       p_key: key,
       p_window_seconds: windowSeconds,
     });
-    if (error) return false;
+
+    if (error) {
+      // Failing open is deliberate, but failing open quietly is how you end up
+      // with no rate limiting in production and no way to know. The usual
+      // cause is supabase/rate-limit.sql never having been run.
+      warnLimiterBroken(error.message);
+      return false;
+    }
+
     return typeof data === "number" && data > max;
-  } catch {
+  } catch (err) {
+    warnLimiterBroken(String(err));
     return false;
   }
+}
+
+let limiterWarned = false;
+
+/** Once per instance. A warning per request would bury the log. */
+function warnLimiterBroken(reason: string) {
+  if (limiterWarned) return;
+  limiterWarned = true;
+  console.error(
+    `[app] RATE LIMITING IS NOT ACTIVE: ${reason}. ` +
+      `Run supabase/rate-limit.sql in this project. Requests are being served ` +
+      `without a limit until it exists.`,
+  );
 }
 
 Deno.serve(async (req) => {

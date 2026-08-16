@@ -14,12 +14,9 @@ dist-ssr
 .env
 .env.local
 
-# Server
-server/.env
-server/db/*.db
-server/db/*.db-wal
-server/db/*.db-shm
-server/node_modules
+# Edge Function local secrets
+supabase/.env.local
+supabase/.temp
 
 # Editor directories and files
 .vscode/*
