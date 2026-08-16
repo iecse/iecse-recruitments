@@ -140,9 +140,29 @@ Until it exists, the club site's Register button points at nothing.
 
 ### 5. Check it, do not assume it
 
+The API answers:
+
 ```bash
-curl -sI https://apply.iecse-manipal.com | grep -iE "content-security|strict-transport"
+curl.exe -s https://<your-ref>.supabase.co/functions/v1/applications/health
 ```
+
+The headers arrived:
+
+```bash
+curl.exe -sI https://apply.iecse-manipal.com
+```
+
+Note `curl.exe`, not `curl`. In PowerShell `curl` is an alias for
+`Invoke-WebRequest`, which does not take `-s` or `-I` and will stop and prompt
+for a URI instead. `curl.exe` is the real one and ships with Windows. The
+PowerShell native forms, if you prefer them:
+
+```powershell
+Invoke-RestMethod https://<your-ref>.supabase.co/functions/v1/applications/health
+(Invoke-WebRequest https://apply.iecse-manipal.com -Method Head).Headers | Format-List
+```
+
+A 401 from the health check means `--no-verify-jwt` did not take.
 
 Then submit one real application, confirm the row lands, and delete it. Read
 the function logs for `RATE LIMITING IS NOT ACTIVE`; if it is there, step 1 did
