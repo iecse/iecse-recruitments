@@ -38,7 +38,7 @@ export default function StepIdentity({ form, errors, update, onRegistrationBlur,
           onChange={update("registrationNumber")}
           onBlur={onRegistrationBlur}
           error={errors.registrationNumber}
-          placeholder="2409000000"
+          placeholder="240900000000"
         />
       </div>
 

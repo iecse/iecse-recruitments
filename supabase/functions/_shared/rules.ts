@@ -12,7 +12,7 @@
  * Change a rule once.
  */
 
-export const REGISTRATION_DIGITS = 10;
+export const REGISTRATION_DIGITS = 12;
 export const WHY_JOIN_MIN = 40;
 
 export const PATTERNS = {
@@ -52,6 +52,9 @@ export const VALID_YEARS = ["1st Year", "2nd Year"];
  */
 export const VALID_BRANCHES = [
   "Computer Science and Engineering",
+  "Aeronautical Engineering",
+  "Mechanical Engineering",
+  "Mechatronics",
   "Mathematics and Computing",
   "Computer Science and Financial Technology",
   "Electronics and Communication Engineering",

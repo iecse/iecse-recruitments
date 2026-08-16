@@ -11,6 +11,8 @@
  * 404s against the static host instead of reaching the API.
  */
 
+import { REGISTRATION_DIGITS } from "../supabase/functions/_shared/rules";
+
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
 /**
@@ -59,7 +61,11 @@ export async function submitApplication(payload) {
  */
 export async function checkRegistration(registration) {
   const regNo = String(registration || "").trim();
-  if (!/^\d{10}$/.test(regNo)) return false;
+  // Length and digits are checked separately rather than built into one regex
+  // from a template string. That form needs the backslash doubled, and if it
+  // is not it silently matches a literal "d" instead of a digit.
+  if (regNo.length !== REGISTRATION_DIGITS) return false;
+  if (!/^\d+$/.test(regNo)) return false;
 
   try {
     const res = await fetch(`${API_BASE}/applications/check/${regNo}`);
