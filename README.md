@@ -41,52 +41,112 @@ There is no frontend `.env` holding secrets, and there must never be: anything
 
 ## Deploying
 
-Three pieces, and only one of them is the static page.
+Nothing here needs a global install. `npx` fetches the CLIs.
 
-**The API is a Supabase Edge Function**, in `supabase/functions/applications`.
-It replaces the Express server in production; that server stays for local
-development against SQLite. Both read their rules from
-`supabase/functions/_shared/rules.ts`, so the two cannot disagree about what is
-valid.
+### Where each step runs
 
-Once, in the club's Supabase project:
+| Step | Where |
+| --- | --- |
+| The two SQL files | Supabase dashboard, SQL Editor, in a browser. Not a terminal. |
+| `supabase ...` | Any terminal, in the repo root |
+| `npm run build` | Any terminal, in the repo root |
+| `firebase ...` | Any terminal, in the repo root |
+| DNS record | Wherever iecse-manipal.com is managed |
 
+The project ref is in the dashboard URL, or Project Settings, General,
+Reference ID.
+
+### 1. Database
+
+In the SQL Editor, open a new query, paste the contents of `supabase/schema.sql`,
+run it. Then the same for `supabase/rate-limit.sql`. Order matters.
+
+Skipping the second one does not fail loudly at deploy time. It fails at
+runtime by disabling rate limiting entirely, and the only sign is a
+`RATE LIMITING IS NOT ACTIVE` line in the function logs.
+
+Then verify, because row level security is easy to believe you have enabled:
+
+```sql
+select relname, relrowsecurity from pg_class where relname = 'applications';
+select policyname from pg_policies where tablename = 'applications';
 ```
-supabase link --project-ref <ref>
+
+Expect `true`, and zero policies. Zero policies under RLS is what denies
+everything that is not the function.
+
+### 2. The API
+
+```bash
+npx supabase login
 ```
 
-Run `supabase/schema.sql` then `supabase/rate-limit.sql` in the SQL editor. The second one is what makes rate limiting work: an edge function is
-stateless and runs in as many instances as it likes, so a counter in memory
-limits one instance and nothing else.
+```bash
+npx supabase link --project-ref <your-ref>
+```
 
+```bash
+npx supabase secrets set ALLOWED_ORIGINS=https://apply.iecse-manipal.com
+```
+
+```bash
+npx supabase functions deploy applications --no-verify-jwt
+```
+
+`--no-verify-jwt` is not optional. Applicants are anonymous, so there is no
+token to present; without it every submission is rejected before it reaches any
+of the validation. The function is still not open: it validates everything,
+rate limits per address, and writes to exactly one table.
+
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected by Supabase. Do not
+set them as secrets.
+
+### 3. The page
+
+Copy `.env.production.example` to `.env.production` and put the real ref in it.
 Then:
 
-```
-supabase secrets set ALLOWED_ORIGINS=https://apply.iecse-manipal.com
-supabase functions deploy applications --no-verify-jwt
-```
-
-`--no-verify-jwt` is required. Applicants are anonymous; there is no login and
-no token to present. The function is still not open season: it validates
-everything, rate limits per address, and only ever writes to one table.
-`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected by Supabase, so
-they are not secrets you set.
-
-**The static page** goes on any static host. Build it with the API's origin
-baked in:
-
-```
-VITE_API_BASE=https://<ref>.supabase.co/functions/v1 npm run build
+```bash
+npm run build
 ```
 
-Without that the app calls `/api`, which only exists behind the Vite dev
-proxy. On a static host every request would 404 against the page itself.
+Use the file rather than `VITE_API_BASE=... npm run build`. That form is bash
+only and silently does nothing in PowerShell: the build succeeds, the variable
+is unset, and the deployed page calls `/api`, which does not exist on a static
+host. Every submission 404s and the page gives no clue why.
 
-That origin must also appear in `ALLOWED_ORIGINS` above, or the browser blocks
-the response at the CORS check.
+Deploy `dist/` to any static host. On Firebase, in the same project as the club
+site:
 
-**Security headers** are not applied by any of this. Whatever hosts the static
-build needs them set there; the list is in SECURITY.md.
+```bash
+npx firebase login
+```
+
+```bash
+npx firebase hosting:sites:create iecse-apply
+```
+
+```bash
+npx firebase deploy --only hosting
+```
+
+### 4. DNS
+
+Point `apply.iecse-manipal.com` at the host, using whatever CNAME or A record
+it gives you. This is the one step with no command here: it happens wherever
+the domain is managed.
+
+Until it exists, the club site's Register button points at nothing.
+
+### 5. Check it, do not assume it
+
+```bash
+curl -sI https://apply.iecse-manipal.com | grep -iE "content-security|strict-transport"
+```
+
+Then submit one real application, confirm the row lands, and delete it. Read
+the function logs for `RATE LIMITING IS NOT ACTIVE`; if it is there, step 1 did
+not take.
 
 ## Building
 

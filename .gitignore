@@ -13,9 +13,11 @@ dist-ssr
 *.local
 .env
 .env.local
+.env.production
 
 # Edge Function local secrets
 supabase/.env.local
+.env.production
 supabase/.temp
 
 # Editor directories and files
