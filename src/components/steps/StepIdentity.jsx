@@ -1,5 +1,5 @@
 import { Select, TextInput } from "../ui/Form";
-import { YEARS } from "../../lib/constants";
+import { BRANCHES, YEARS } from "../../lib/constants";
 
 export default function StepIdentity({ form, errors, update, onRegistrationBlur, duplicate }) {
   return (
@@ -52,14 +52,23 @@ export default function StepIdentity({ form, errors, update, onRegistrationBlur,
         </p>
       )}
 
-      <TextInput
+      {/* A list, not free text. The committee sorts applicants by branch by
+          hand, and "CSE", "cse" and "Computer Science & Engg" are three values
+          to a spreadsheet and one thing to a person. */}
+      <Select
         name="branch"
         label="Branch"
         value={form.branch}
         onChange={update("branch")}
         error={errors.branch}
-        placeholder="Computer Science and Engineering"
-      />
+      >
+        <option value="">Select your branch</option>
+        {BRANCHES.map((branch) => (
+          <option key={branch} value={branch}>
+            {branch}
+          </option>
+        ))}
+      </Select>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <TextInput

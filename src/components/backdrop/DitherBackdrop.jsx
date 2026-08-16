@@ -132,6 +132,7 @@ uniform sampler2D sealField;
 uniform float sealScale;
 uniform vec2 sealCenter;
 uniform float sealMix;
+uniform float swell;
 
 vec4 mod289(vec4 x) { return x - floor(x * (1.0/289.0)) * 289.0; }
 vec4 permute(vec4 x) { return mod289(((x * 34.0) + 1.0) * x); }
@@ -246,6 +247,13 @@ void main() {
   // lights all of its cells and a good share of them brightly.
   float ground = 0.06 + f * (0.16 + (1.0 - sealMix) * 0.04);
   float value = ground + mark * sealMix * (0.80 + f * 0.5);
+
+  // Every answered field makes the field briefly fuller: more of the ground
+  // clears the dither threshold, so cells light up across the whole frame and
+  // then settle back. This is the "it responded to me" beat that the grid
+  // tightening used to provide. It is a continuous value, so unlike the grid
+  // it cannot staircase however fast it moves.
+  value += swell * (0.12 + f * 0.30);
 
   // The wake is a blend toward the hot end of the same ramp, and nothing is
   // added on top. The old additive term let dye push the result past 1.0, and
@@ -599,6 +607,7 @@ export default function DitherBackdrop({
         sealScale: { value: quality.sealScale },
         sealCenter: { value: new Vec2(quality.sealCenter[0], quality.sealCenter[1]) },
         sealMix: { value: 0.35 },
+        swell: { value: 0 },
       },
     });
     const waveMesh = new Mesh(gl, { geometry, program: waveProgram });
@@ -773,6 +782,8 @@ export default function DitherBackdrop({
     let introFired = false;
     let smoothedProgress = 0;
     let smoothedFocus = 0;
+    let lastTarget = 0;
+    let swell = 0;
 
     const draw = (now) => {
       frame = requestAnimationFrame(draw);
@@ -861,6 +872,16 @@ export default function DitherBackdrop({
       if (Math.abs(target - smoothedProgress) < 0.0005) smoothedProgress = target;
       const resolved = smoothedProgress;
 
+      // A step up in completion sets the swell going; it decays on its own.
+      // Driven by the real target rather than the eased value, so it fires the
+      // moment the applicant answers something rather than a second later.
+      if (target > lastTarget + 0.001) {
+        swell = Math.min(1, swell + (target - lastTarget) * 6 + 0.25);
+      }
+      lastTarget = target;
+      swell *= Math.pow(0.06, delta);
+      if (swell < 0.002) swell = 0;
+
       const wu = waveProgram.uniforms;
       wu.fluidField.value = fluidRead.texture;
       wu.time.value = time;
@@ -873,6 +894,7 @@ export default function DitherBackdrop({
       // not to be absent until it does: at 0.3 the logo was quieter than the
       // noise around it, so a fresh page read as a random field.
       wu.sealMix.value = lerp(0.55, 1, resolved) * intro;
+      wu.swell.value = swell;
       // Halved. This sets how fast the noise carries cells across their
       // dither threshold, which is the rest of the flicker.
       wu.waveSpeed.value = running ? lerp(0.024, 0.036, resolved) : 0;

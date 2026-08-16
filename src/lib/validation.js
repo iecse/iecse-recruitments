@@ -4,7 +4,7 @@
  * announced through aria-describedby.
  */
 
-import { isTierAllowed, paysOnApplication } from "./constants";
+import { BRANCHES, isTierAllowed, paysOnApplication } from "./constants";
 /* The single source for every pattern and bound. The API imports the same
    file, so the two cannot disagree about what is valid. Anything checked in
    both places must come from here rather than be written out twice. */
@@ -47,7 +47,10 @@ function validateIdentity(form) {
   }
 
   if (!form.year) errors.year = "Select your year.";
-  if (isBlank(form.branch)) errors.branch = "Enter your branch.";
+  if (isBlank(form.branch)) errors.branch = "Select your branch.";
+  else if (!BRANCHES.includes(form.branch.trim())) {
+    errors.branch = "Choose a branch from the list.";
+  }
 
   if (isBlank(form.learnerEmail)) {
     errors.learnerEmail = "Enter your email.";

@@ -19,6 +19,10 @@ export const WHATSAPP_GROUP_LINK =
 /* Recruitment is open to first and second years only. */
 export const YEARS = ["1st Year", "2nd Year"];
 
+/* Same list the API validates against, so the dropdown cannot offer something
+   that would be rejected on submit. */
+export { VALID_BRANCHES as BRANCHES } from "../../supabase/functions/_shared/rules";
+
 export const DOMAINS = [
   {
     value: "Coding",

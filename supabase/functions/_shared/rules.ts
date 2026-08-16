@@ -44,6 +44,24 @@ export const MAX = {
 
 export const VALID_YEARS = ["1st Year", "2nd Year"];
 
+/**
+ * The branches the club recruits from. A dropdown rather than free text,
+ * because the committee sorts applicants by branch by hand and "CSE", "cse",
+ * "Comp Sci" and "Computer Science & Engg" are four different values to a
+ * spreadsheet and one thing to a person.
+ */
+export const VALID_BRANCHES = [
+  "Computer Science and Engineering",
+  "Mathematics and Computing",
+  "Computer Science and Financial Technology",
+  "Electronics and Communication Engineering",
+  "Electronics and Electrical Engineering",
+  "Electronics Engineering",
+  "Biotechnology",
+  "Chemical Engineering",
+  "Civil Engineering",
+];
+
 export const VALID_DOMAINS = [
   "Coding",
   "Web Development",

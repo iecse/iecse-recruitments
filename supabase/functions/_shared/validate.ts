@@ -13,6 +13,7 @@ import {
   REGISTRATION_DIGITS,
   TIERS_BY_YEAR,
   URL_FIELDS,
+  VALID_BRANCHES,
   VALID_DOMAINS,
   VALID_TIERS,
   VALID_YEARS,
@@ -96,8 +97,10 @@ export function validateApplication(
   /* ---- branch ---- */
   if (isBlank(body.branch)) {
     errors.branch = "Branch is required.";
-  } else if (sanitize(body.branch).length > MAX.branch) {
-    errors.branch = `Branch must be under ${MAX.branch} characters.`;
+  } else if (!VALID_BRANCHES.includes(sanitize(body.branch))) {
+    // Allowlisted now that it is a dropdown. Free text would let anything
+    // through, and the committee sorts these by hand.
+    errors.branch = "Choose a branch from the list.";
   }
 
   /* ---- domain ---- */
