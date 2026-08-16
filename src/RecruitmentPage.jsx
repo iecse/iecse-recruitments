@@ -558,12 +558,13 @@ export default function RecruitmentPage() {
 
                   <div className="flex flex-col gap-3 border-t border-line pt-4">
                     <p className="text-[13px] leading-relaxed text-muted">
-                      Membership runs for the rest of your degree. Take it in
-                      first year and it holds through second, third and fourth.
+                      Membership runs for the rest of your degree. Pay once now
+                      and it holds for every year that follows, with nothing to
+                      renew.
                     </p>
                     <p className="text-[13px] leading-relaxed text-muted">
                       It is also what lets you stand for Working or Management
-                      Committee, including a year later, without paying again.
+                      Committee.
                     </p>
                     <p className="text-[13px] leading-relaxed text-muted">
                       Members get the workshops, bootcamps and study material

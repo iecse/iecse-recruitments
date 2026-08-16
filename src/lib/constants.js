@@ -84,13 +84,13 @@ export const TIERS = [
     name: "Member",
     commitment: "No interview",
     summary:
-      "Membership is for the rest of your degree. Take it once and it holds through second, third and fourth year.",
+      "Membership is for the rest of your degree. Paid once with this application, it holds for every year that follows.",
     points: [
       "Workshops, bootcamps and study material kept for members",
       "Members only resources and session recordings",
       "Added to the members group automatically once your payment clears",
-      "Never expires, and never has to be bought again",
-      "Being a member is what lets you stand for a committee, this year or a later one",
+      "Runs for the rest of your degree, with nothing to renew",
+      "Being a member is what lets you stand for a committee",
     ],
   },
   {
