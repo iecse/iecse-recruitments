@@ -378,8 +378,12 @@ const EDGE_MARGIN = 0.02;
  * smaller budget. Same effect, fewer pixels of work.
  */
 const COMPACT = {
-  fine: 5,
-  coarse: 13,
+  fine: 4,
+  // The grid does not animate, so this is the size cells are, always. It has
+  // to be fine enough to sample the 64 by 64 mark: coarser than this and the
+  // curves of the S are read at fewer cells than the texture has, which loses
+  // exactly the detail that makes it legible as a letter.
+  coarse: 10,
   colorNumStart: 3,
   colorNumEnd: 4,
   focusRadius: 0.2,
@@ -401,8 +405,10 @@ const COMPACT = {
 };
 
 const FULL = {
-  fine: 4,
-  coarse: 16,
+  fine: 3,
+  // See the note on the touch tier. 16 sampled a 64 grid mark at 47 cells,
+  // which is where the glyph started reading as blocks rather than as a shape.
+  coarse: 11,
   colorNumStart: 3.4,
   colorNumEnd: 5.5,
   focusRadius: 0.15,

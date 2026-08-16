@@ -37,10 +37,11 @@ const COLOR_NUM = 3.4;
 const BIAS = [0.26, 0.13, 0.07];
 
 /**
- * Pixel size of one dither cell on screen, matched to the shader resting grid
- * (quality.coarse = 16). A finer grid reads as noise.
+ * Pixel size of one dither cell on screen, matched to the shader's resting
+ * grid so the still version and the live one are the same picture. Keep this
+ * in step with quality.coarse in DitherBackdrop.
  */
-const CELL = 15;
+const CELL = 11;
 
 /** Cheap deterministic value noise, standing in for the shader FBM. */
 function hash(x, y) {
