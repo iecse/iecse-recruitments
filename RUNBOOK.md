@@ -89,14 +89,29 @@ Allowed: `pending`, `not_required`, `scheduled`, `done`.
 
 ## The Sheet is not updating
 
-In order of likelihood:
+Do not guess. In the Apps Script editor, run `diagnose` from the function
+dropdown and read View, Logs. It checks each cause in the order it can fail and
+names the one it is. The three it distinguishes:
 
-1. Nobody ran the refresh. It is not automatic unless a time trigger was added.
-   IECSE menu, Refresh from database, or run `refreshFromApi` in Apps Script.
+1. Nobody ran the refresh, and nothing runs it automatically. This is the usual
+   one. Fix it permanently: run `installAutoRefresh` once. That installs a time
+   driven trigger and the sheet keeps itself current from then on. For a single
+   refresh now, run `refreshFromApi`.
 2. `EXPORT_TOKEN` was rotated on Supabase but not in the Apps Script properties.
    They must match exactly.
-3. The export route is not deployed. `curl` it: no token should give 401, and
-   404 means the function needs deploying.
+3. The export route is not deployed, which shows up as 404.
+
+The trigger runs as whoever installed it, on their authorisation. If that person
+leaves or loses access to the sheet, it stops silently. Install it from an
+account that will outlast recruitment, and re-run `diagnose` if the sheet ever
+goes quiet again: it reports whether a trigger is installed.
+
+`installAutoRefresh` refreshes every 15 minutes. Change `MINUTES` at the top of
+that function and run it again to change the interval; it replaces its own
+trigger rather than stacking a second one.
+
+If `SHEET_ID` is set, the project is standalone and the IECSE menu does not
+appear in the sheet at all. Run these from the Apps Script editor.
 
 ## Nobody can submit at all
 

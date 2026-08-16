@@ -68,6 +68,9 @@ function onOpen() {
       .createMenu("IECSE")
       .addItem("Refresh from database", "refreshFromApi")
       .addSeparator()
+      .addItem("Turn on auto refresh", "installAutoRefresh")
+      .addItem("Turn off auto refresh", "removeAutoRefresh")
+      .addSeparator()
       .addItem("Why is this not updating?", "diagnose")
       .addToUi();
   } catch (e) {
@@ -98,7 +101,8 @@ function diagnose() {
 
   out.push("API_BASE      " + (base || "NOT SET"));
   out.push("EXPORT_TOKEN  " + (token ? "set, " + token.length + " chars" : "NOT SET"));
-  out.push("SHEET_ID      " + (sheetId ? "set" : "not set (fine if bound to the sheet)"));
+  out.push("SHEET_ID      " + (sheetId ? "set, so this project is standalone" : "not set, so this project is bound to the sheet"));
+  out.push("auto refresh  " + (countRefreshTriggers() > 0 ? countRefreshTriggers() + " trigger(s) installed" : "NOT INSTALLED, nothing refreshes on its own"));
 
   if (!base || !token) {
     out.push("");
@@ -133,9 +137,23 @@ function diagnose() {
   if (code === 200) {
     var rows = (JSON.parse(r.getContentText()).rows || []).length;
     out.push("The API is fine and returned " + rows + " applications.");
-    out.push("Nothing is broken: the refresh has simply not been run.");
-    out.push("Use the IECSE menu, Refresh from database. To stop having to:");
-    out.push("Triggers, add a time driven trigger on refreshFromApi.");
+    out.push("Nothing is broken. The data is there, the refresh just has not run.");
+    out.push("");
+    if (countRefreshTriggers() > 0) {
+      out.push("A trigger IS installed, so this should be refreshing on its own.");
+      out.push("Check Executions in the left sidebar for a failing run.");
+    } else {
+      out.push("Nothing refreshes this sheet automatically. To fix that for good:");
+      out.push("  run installAutoRefresh once, from the function dropdown.");
+      out.push("");
+      out.push("To refresh once right now: run refreshFromApi.");
+      if (sheetId) {
+        out.push("");
+        out.push("Note: SHEET_ID is set, so this project is standalone and the");
+        out.push("IECSE menu does not appear in the sheet. Run functions from");
+        out.push("this editor, or install the trigger and stop thinking about it.");
+      }
+    }
   } else if (code === 401) {
     out.push("The token here does not match the one on Supabase.");
     out.push("Usually because EXPORT_TOKEN was rotated on one side only.");
@@ -156,6 +174,66 @@ function diagnose() {
 
   Logger.log(out.join(NL));
   return out.join(NL);
+}
+
+/**
+ * Make the sheet refresh itself.
+ *
+ * This is the answer to "do I have to keep running it by hand". Run this
+ * once. It installs a time driven trigger that calls refreshFromApi on a
+ * schedule, and from then on the sheet keeps itself current.
+ *
+ * Safe to run more than once: it clears any refresh trigger it already
+ * installed before adding one, so you cannot end up with four of them all
+ * rewriting the sheet at once.
+ *
+ * The trigger runs as whoever installs it, using their authorisation. If that
+ * person loses access to the sheet or the script, the trigger stops. Install
+ * it from an account that will still be around at the end of recruitment.
+ *
+ * To change the interval, edit MINUTES below and run this again.
+ */
+function installAutoRefresh() {
+  var MINUTES = 15;
+
+  var removed = removeAutoRefresh();
+
+  ScriptApp.newTrigger("refreshFromApi")
+    .timeBased()
+    .everyMinutes(MINUTES)
+    .create();
+
+  var msg = "Auto refresh installed: every " + MINUTES + " minutes.";
+  if (removed > 0) {
+    msg = msg + " Replaced " + removed + " existing trigger(s).";
+  }
+  msg = msg + " Runs as " + Session.getEffectiveUser().getEmail() + ".";
+  Logger.log(msg);
+  return msg;
+}
+
+/** Stop the sheet refreshing itself. Returns how many triggers were removed. */
+function removeAutoRefresh() {
+  var all = ScriptApp.getProjectTriggers();
+  var n = 0;
+  for (var i = 0; i < all.length; i += 1) {
+    if (all[i].getHandlerFunction() === "refreshFromApi") {
+      ScriptApp.deleteTrigger(all[i]);
+      n += 1;
+    }
+  }
+  Logger.log("Removed " + n + " refresh trigger(s).");
+  return n;
+}
+
+/** How many refresh triggers are installed right now. */
+function countRefreshTriggers() {
+  var all = ScriptApp.getProjectTriggers();
+  var n = 0;
+  for (var i = 0; i < all.length; i += 1) {
+    if (all[i].getHandlerFunction() === "refreshFromApi") n += 1;
+  }
+  return n;
 }
 
 function refreshFromApi() {
