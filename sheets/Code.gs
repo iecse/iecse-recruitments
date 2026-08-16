@@ -110,7 +110,14 @@ function refreshFromApi() {
     writeTab(book, tab.name, rows.filter(function (r) { return r.tier === tab.tier; }));
   });
 
-  book.toast(rows.length + " applications loaded", "IECSE", 5);
+  // toast needs a UI. A standalone project has none, and this is the last line
+  // of the refresh, so an unguarded call fails after all the work succeeded and
+  // reads like the whole run failed.
+  try {
+    book.toast(rows.length + " applications loaded", "IECSE", 5);
+  } catch (e) {
+    Logger.log(rows.length + " applications loaded");
+  }
 }
 
 function writeTab(book, name, rows) {
