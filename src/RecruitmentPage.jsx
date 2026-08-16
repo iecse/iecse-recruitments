@@ -169,12 +169,27 @@ export default function RecruitmentPage() {
     cardRef.current?.scrollIntoView({ block: "start" });
   }, [step]);
 
-  const focusFirstError = useCallback(() => {
-    requestAnimationFrame(() => {
-      const field = cardRef.current?.querySelector('[aria-invalid="true"]');
-      if (field) field.focus({ preventScroll: false });
-    });
-  }, []);
+  /**
+   * Moves focus to the first field in error, after the render that marks it.
+   *
+   * This used to call requestAnimationFrame straight after setErrors, and
+   * queried for [aria-invalid="true"] inside it. That attribute does not exist
+   * until React has re-rendered, and the frame can arrive first, so the query
+   * found nothing and focus stayed on the submit button. Somebody on a keyboard
+   * pressed submit, six errors appeared, and they were left at the bottom of
+   * the form with no idea where to go.
+   *
+   * A flag consumed by an effect runs after the DOM is updated, which is the
+   * only point at which the field can be found.
+   */
+  const [focusErrorAt, setFocusErrorAt] = useState(0);
+  const focusFirstError = useCallback(() => setFocusErrorAt(Date.now()), []);
+
+  useEffect(() => {
+    if (!focusErrorAt) return;
+    const field = cardRef.current?.querySelector('[aria-invalid="true"]');
+    if (field) field.focus({ preventScroll: false });
+  }, [focusErrorAt]);
 
   /** Pushes a ripple into the field from a screen point. */
   const fireImpulse = useCallback((event) => {
@@ -492,7 +507,7 @@ export default function RecruitmentPage() {
                       <button
                         type="button"
                         onClick={handleClear}
-                        className="rounded-sm px-1 font-mono text-[11px] uppercase tracking-[0.12em] text-faint transition-colors duration-200 hover:text-muted"
+                        className="self-start rounded-sm px-1 py-1 font-mono text-[11px] uppercase tracking-[0.12em] text-faint transition-colors duration-200 hover:text-muted sm:self-auto"
                       >
                         {confirmingClear ? "Tap again to erase" : "Clear draft"}
                       </button>

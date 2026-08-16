@@ -2,7 +2,11 @@
   "//": "Firebase Hosting config for the recruitment page. The club site lives in its own repo and its own Hosting site; this deploys alongside it in the same project. Firebase does not read public/_headers, so the same header list is repeated here. Change one, change both.",
   "hosting": {
     "public": "dist",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
     "rewrites": [
       {
         "//": "Single page app. Every path serves index.html so a refresh on a deep link does not 404. The form uses a hash for its step, so this mostly matters for anyone who mistypes a path.",
@@ -18,8 +22,14 @@
             "key": "Strict-Transport-Security",
             "value": "max-age=31536000; includeSubDomains"
           },
-          { "key": "X-Content-Type-Options", "value": "nosniff" },
-          { "key": "X-Frame-Options", "value": "DENY" },
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          },
+          {
+            "key": "X-Frame-Options",
+            "value": "DENY"
+          },
           {
             "key": "Referrer-Policy",
             "value": "strict-origin-when-cross-origin"
@@ -28,7 +38,10 @@
             "key": "Permissions-Policy",
             "value": "geolocation=(), microphone=(), camera=(), payment=(), usb=()"
           },
-          { "key": "Cross-Origin-Opener-Policy", "value": "same-origin" },
+          {
+            "key": "Cross-Origin-Opener-Policy",
+            "value": "same-origin"
+          },
           {
             "//": "script-src has no 'unsafe-inline' because the Vite build emits no inline scripts. style-src needs it because React sets element style attributes. connect-src must name the Supabase project or every submission is blocked before it leaves the browser.",
             "key": "Content-Security-Policy",
@@ -46,8 +59,14 @@
         ]
       },
       {
-        "source": "/index.html",
-        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+        "source": "/{,index.html}",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ],
+        "//": "Matches both / and /index.html. Firebase serves the app at /, and a rule for the literal path alone left the root on the default max-age=3600, so a returning visitor could get an hour-old page after a deploy. On a launch day with fixes going out, that is the difference between shipping a fix and thinking you have."
       }
     ],
     "target": "apply"
