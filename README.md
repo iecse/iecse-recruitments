@@ -186,6 +186,27 @@ Deploys to its own subdomain and is served from the root. If it ever moves under
 a path, set `VITE_BASE` (for example `VITE_BASE=/apply/`). The API is deployed
 separately; put its origin in `CORS_ORIGINS` and point `/api` at it.
 
+## The committee's Google Sheet
+
+`sheets/Code.gs` is an Apps Script that pulls every application and rewrites
+three tabs: Members, Working Committee and Management Committee. Setup
+instructions are in the header of that file.
+
+It reads `GET /applications/export`, which is the one endpoint that hands out
+personal data in bulk and is gated on a bearer token. Generate one:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+Set the same value in both places: `supabase secrets set EXPORT_TOKEN=...` and
+the Apps Script's Script properties. If the Supabase secret is unset the route
+returns 404 rather than serving without a check.
+
+The sheet is a copy, not the source of truth. Editing a cell changes nothing in
+the database and the next refresh overwrites it. The Notes column is the
+exception: it is keyed on registration number and preserved across refreshes.
+
 ## Before changing anything
 
 - [DESIGN.md](DESIGN.md) records what was decided and why, including a list of

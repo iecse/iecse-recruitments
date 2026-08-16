@@ -140,6 +140,21 @@ async function overLimit(
   }
 }
 
+/**
+ * Compares without leaking length or position through timing. Overkill for a
+ * token this long, but the alternative is a === that returns on the first
+ * differing byte, and that is a habit worth not having.
+ */
+function timingSafeEqual(a: string, b: string): boolean {
+  const encoder = new TextEncoder();
+  const x = encoder.encode(a);
+  const y = encoder.encode(b);
+  if (x.length !== y.length) return false;
+  let diff = 0;
+  for (let i = 0; i < x.length; i += 1) diff |= x[i] ^ y[i];
+  return diff === 0;
+}
+
 let limiterWarned = false;
 
 /** Once per instance. A warning per request would bury the log. */
@@ -169,6 +184,76 @@ Deno.serve(async (req) => {
     /* ---------------------------------------------------------- health */
     if (req.method === "GET" && path === "/health") {
       return json({ status: "ok", timestamp: new Date().toISOString() }, 200, origin);
+    }
+
+    /* ---------------------------------------------------------- export */
+    /**
+     * Every row, for the committee's Google Sheet.
+     *
+     * This is the one endpoint that hands out personal data in bulk: names,
+     * emails, phone numbers and payment references for every applicant. It is
+     * gated on a bearer token set with `supabase secrets set EXPORT_TOKEN=...`,
+     * and if that secret is missing the route does not exist rather than
+     * running open.
+     *
+     * Deliberately not CORS enabled. The caller is Google Apps Script, which
+     * is server side; no browser should ever be able to reach this, and
+     * withholding the header means a page that tries cannot read the reply.
+     */
+    if (req.method === "GET" && path === "/export") {
+      const expected = Deno.env.get("EXPORT_TOKEN")?.trim();
+      if (!expected) {
+        console.error("[app] export requested but EXPORT_TOKEN is not set");
+        return new Response(JSON.stringify({ error: "Not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+        });
+      }
+
+      const presented = (req.headers.get("authorization") ?? "")
+        .replace(/^Bearer /i, "")
+        .trim();
+
+      if (!timingSafeEqual(presented, expected)) {
+        console.warn("[app] export rejected: bad token");
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+        });
+      }
+
+      if (await overLimit(req, "export", 30, 60 * 60)) {
+        return new Response(JSON.stringify({ error: "Too many exports." }), {
+          status: 429,
+          headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+        });
+      }
+
+      const { data, error } = await admin
+        .from("applications")
+        .select("*")
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        console.error("[app] export failed:", error.message);
+        return new Response(JSON.stringify({ error: "Export failed." }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+        });
+      }
+
+      console.log(`[app] export served: ${data?.length ?? 0} rows`);
+      return new Response(
+        JSON.stringify({ rows: data ?? [], exported_at: new Date().toISOString() }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+          },
+        },
+      );
     }
 
     /* ----------------------------------------------------------- check */
