@@ -1,0 +1,12 @@
+{
+  "projects": {
+    "default": "iecse-main-397db"
+  },
+  "targets": {
+    "iecse-main-397db": {
+      "hosting": {
+        "apply": ["iecse-apply"]
+      }
+    }
+  }
+}

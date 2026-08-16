@@ -128,6 +128,11 @@ npx firebase-tools login
 npx firebase-tools hosting:sites:create iecse-apply
 ```
 
+`.firebaserc` already names the project and maps the `apply` target onto the
+`iecse-apply` site, so no `--project` flag is needed. Without that file the CLI
+answers "No currently active project", and without the target a deploy would be
+ambiguous between this site and the club site, which share the project.
+
 ```bash
 npx firebase-tools deploy --only hosting:apply
 ```
