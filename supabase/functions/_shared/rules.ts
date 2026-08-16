@@ -65,11 +65,21 @@ export const VALID_BRANCHES = [
   "Civil Engineering",
 ];
 
+/**
+ * The domains an applicant can pick. Web and app development are one domain,
+ * Development, rather than two: the work overlaps and splitting it made
+ * applicants choose between things they would do both of.
+ *
+ * This is the list the API validates against. The blurbs shown beside each one
+ * live in src/lib/constants.js and are keyed off these exact strings, so a
+ * domain added here without a blurb is visible rather than silently blank.
+ */
 export const VALID_DOMAINS = [
-  "Coding",
-  "Web Development",
+  "Technical/Coding",
+  "Development",
   "Machine Learning",
   "Design",
+  "Hashtag",
 ];
 
 export const VALID_TIERS = ["member", "workcomm", "mancomm"];

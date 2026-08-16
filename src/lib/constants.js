@@ -25,24 +25,25 @@ export { VALID_BRANCHES as BRANCHES } from "../../supabase/functions/_shared/rul
 /* Re-exporting does not bind the name locally, and this file uses it below. */
 import { requiresInterview } from "../../supabase/functions/_shared/rules";
 
-export const DOMAINS = [
-  {
-    value: "Coding",
-    blurb: "Algorithms, contests, and the fundamentals everything else sits on.",
-  },
-  {
-    value: "Web Development",
-    blurb: "Products people actually open. Frontend, backend, and the glue.",
-  },
-  {
-    value: "Machine Learning",
-    blurb: "Models, data pipelines, and the research reading group.",
-  },
-  {
-    value: "Design",
-    blurb: "Interfaces, brand, and the visual language of everything we ship.",
-  },
-];
+/**
+ * What each domain is, in the applicant's words rather than the club's.
+ *
+ * Keyed on the values in VALID_DOMAINS rather than repeating them, so the
+ * choices on screen cannot drift from the ones the API accepts. A domain added
+ * to the shared list without a blurb here renders with none, which is obvious.
+ */
+const DOMAIN_BLURBS = {
+  "Technical/Coding": "DSA, problem solving, and competitive coding.",
+  "Development": "Responsive websites and mobile apps, frontend through backend.",
+  "Machine Learning": "Data, models, and AI, turned into systems that do something.",
+  "Design": "UI, UX, graphics, and the visual storytelling around them.",
+  "Hashtag": "The club's technical column: what is happening in tech, written up by us.",
+};
+
+export const DOMAINS = VALID_DOMAINS.map((value) => ({
+  value,
+  blurb: DOMAIN_BLURBS[value] || "",
+}));
 
 export const STEPS = [
   { id: 1, key: "identity", label: "You", title: "Who is applying" },
@@ -63,7 +64,7 @@ export const STEPS = [
 /* Re-exported so the client and the API agree on which tiers are interviewed.
    Every tier pays with the application; interviewing is a separate question. */
 export { requiresInterview } from "../../supabase/functions/_shared/rules";
-import { HONEYPOT_FIELD } from "../../supabase/functions/_shared/rules";
+import { HONEYPOT_FIELD, VALID_DOMAINS } from "../../supabase/functions/_shared/rules";
 
 /** Step 5 is the payment step for every tier. */
 export function stepsForTier() {
