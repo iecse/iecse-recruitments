@@ -5,16 +5,19 @@
  *   GET  /applications/check/:regNo has this registration number applied
  *   GET  /applications/health       liveness
  *
- * Replaces the Express server for production. That server still exists for
- * local development against SQLite, but this is what applicants reach, and the
- * two share their rules through _shared/rules.ts so they cannot drift.
+ * This is the only implementation. `npm run dev:api` runs this same file
+ * locally through Deno, so development and production execute the same code
+ * rather than two versions kept in agreement by hand.
  *
  * This runs with the service role key, which Supabase injects, and which
  * bypasses row level security. That is why the table denies anon and
  * authenticated everything: the browser has no path to it except through here.
  */
 
-import { createClient } from "@supabase/supabase-js";
+// Fully qualified on purpose. A bare specifier needs an import map, and the
+// deploy bundler uploads only the function's own .ts files: deno.json does not
+// go with them, so the bare form resolves locally and fails at deploy time.
+import { createClient } from "jsr:@supabase/supabase-js@^2.112.3";
 import { validateApplication } from "../_shared/validate.ts";
 import { PATTERNS, REGISTRATION_DIGITS } from "../_shared/rules.ts";
 

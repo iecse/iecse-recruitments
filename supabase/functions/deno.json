@@ -1,7 +1,4 @@
 {
-  "$comment": "Edge Functions run on Deno, not Node. Without nodeModulesDir set to none, Deno tries to resolve the function's imports against the Vite app's node_modules directory one level up and fails.",
-  "nodeModulesDir": "none",
-  "imports": {
-    "@supabase/supabase-js": "jsr:@supabase/supabase-js@^2.112.3"
-  }
+  "$comment": "Local tooling only. The deploy bundler uploads the function's own .ts files and not this, so imports must be fully qualified in the source rather than mapped here. Without nodeModulesDir set to none, `deno check` tries to resolve against the Vite app's node_modules one level up and fails.",
+  "nodeModulesDir": "none"
 }
