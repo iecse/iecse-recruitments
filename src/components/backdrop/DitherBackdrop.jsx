@@ -132,6 +132,7 @@ uniform sampler2D sealField;
 uniform float sealScale;
 uniform vec2 sealCenter;
 uniform float sealMix;
+uniform float develop;
 uniform float swell;
 
 vec4 mod289(vec4 x) { return x - floor(x * (1.0/289.0)) * 289.0; }
@@ -245,15 +246,20 @@ void main() {
   // rather than a shape on a background. Ground is set so roughly a quarter to
   // a third of its cells clear the bias and none reach the top step; the mark
   // lights all of its cells and a good share of them brightly.
-  float ground = 0.06 + f * (0.16 + (1.0 - sealMix) * 0.04);
+  // The ground thickens as the application fills. More of it clears the dither
+  // threshold, so more cells light and the field reads as denser: the fog that
+  // used to come from the grid tightening, without the grid moving. It is a
+  // level, not an event, so clearing a field thins it back out again.
+  //
+  // It used to be multiplied by (1.0 - sealMix), which ran it the wrong way
+  // entirely: the field got thinner the more you answered.
+  float ground = 0.05 + f * (0.12 + develop * 0.24);
   float value = ground + mark * sealMix * (0.80 + f * 0.5);
 
-  // Every answered field makes the field briefly fuller: more of the ground
-  // clears the dither threshold, so cells light up across the whole frame and
-  // then settle back. This is the "it responded to me" beat that the grid
-  // tightening used to provide. It is a continuous value, so unlike the grid
-  // it cannot staircase however fast it moves.
-  value += swell * (0.12 + f * 0.30);
+  // A small lift on top when a field is answered, so the change has a moment
+  // as well as a level. Deliberately slight: the level is the effect, this is
+  // only the acknowledgement.
+  value += swell * (0.05 + f * 0.10);
 
   // The wake is a blend toward the hot end of the same ramp, and nothing is
   // added on top. The old additive term let dye push the result past 1.0, and
@@ -607,6 +613,7 @@ export default function DitherBackdrop({
         sealScale: { value: quality.sealScale },
         sealCenter: { value: new Vec2(quality.sealCenter[0], quality.sealCenter[1]) },
         sealMix: { value: 0.35 },
+        develop: { value: 0 },
         swell: { value: 0 },
       },
     });
@@ -876,7 +883,7 @@ export default function DitherBackdrop({
       // Driven by the real target rather than the eased value, so it fires the
       // moment the applicant answers something rather than a second later.
       if (target > lastTarget + 0.001) {
-        swell = Math.min(1, swell + (target - lastTarget) * 6 + 0.25);
+        swell = Math.min(1, swell + (target - lastTarget) * 4 + 0.12);
       }
       lastTarget = target;
       swell *= Math.pow(0.06, delta);
@@ -894,6 +901,7 @@ export default function DitherBackdrop({
       // not to be absent until it does: at 0.3 the logo was quieter than the
       // noise around it, so a fresh page read as a random field.
       wu.sealMix.value = lerp(0.55, 1, resolved) * intro;
+      wu.develop.value = resolved;
       wu.swell.value = swell;
       // Halved. This sets how fast the noise carries cells across their
       // dither threshold, which is the rest of the flicker.

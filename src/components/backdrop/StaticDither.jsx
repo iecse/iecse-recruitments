@@ -106,7 +106,10 @@ function drawField(canvas, seed, cssWidth, cssHeight) {
         valueNoise(u * 5 * aspect, v * 5) * 0.6 +
         valueNoise(u * 11 * aspect, v * 11) * 0.4;
 
-      value += 0.06 + noise * 0.18;
+      // Matches the shader's ground at rest. The live one thickens as the
+      // application fills; this is the still version, so it stays at the
+      // starting level.
+      value += 0.05 + noise * 0.12;
 
       /*
        * The shader quantises per channel, after subtracting a bias. That bias
