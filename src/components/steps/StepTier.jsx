@@ -29,11 +29,10 @@ export default function StepTier({ form, errors, update }) {
             annual, and it is the prerequisite for standing for a committee.
             Stated here because this is the screen where the choice is made. */}
         <p className="rounded-md border border-line bg-surface p-4 text-[13px] leading-relaxed text-muted">
-          Membership lasts the rest of your degree. Take it in first year and it
-          carries through second, third and fourth &mdash; there is nothing to
-          renew and nothing to buy again. It is also what qualifies you to stand
-          for a committee, so joining as a member now and applying for one next
-          year is a normal route, not a step backwards.
+          Membership lasts the rest of your degree. Take it in first year and
+          it carries through second, third and fourth. There is nothing to
+          renew and nothing to buy again. It is also what qualifies you to
+          stand for a committee, this year or a later one.
         </p>
       </div>
 

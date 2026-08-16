@@ -563,8 +563,7 @@ export default function RecruitmentPage() {
                     </p>
                     <p className="text-[13px] leading-relaxed text-muted">
                       It is also what lets you stand for Working or Management
-                      Committee &mdash; including a year later, without paying
-                      again.
+                      Committee, including a year later, without paying again.
                     </p>
                     <p className="text-[13px] leading-relaxed text-muted">
                       Members get the workshops, bootcamps and study material
