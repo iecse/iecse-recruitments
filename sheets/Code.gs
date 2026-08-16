@@ -80,8 +80,16 @@ function refreshFromApi() {
   });
 
   var code = response.getResponseCode();
-  if (code === 401) throw new Error("EXPORT_TOKEN does not match the one set on Supabase.");
-  if (code === 404) throw new Error("EXPORT_TOKEN is not set on Supabase, so the export route is disabled.");
+  if (code === 401) throw new Error("EXPORT_TOKEN here does not match the one set on Supabase.");
+  if (code === 404) {
+    // 404 has two causes and they need different fixes, so do not guess at one.
+    throw new Error(
+      "The export route answered 404. Either the function has not been " +
+      "deployed since the route was added, which is the usual cause, or " +
+      "EXPORT_TOKEN is unset on Supabase. Deploy with: " +
+      "supabase functions deploy applications --no-verify-jwt"
+    );
+  }
   if (code !== 200) throw new Error("Export failed with HTTP " + code + ": " + response.getContentText().slice(0, 200));
 
   var rows = JSON.parse(response.getContentText()).rows || [];
