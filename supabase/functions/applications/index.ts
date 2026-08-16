@@ -22,27 +22,50 @@ import { validateApplication } from "../_shared/validate.ts";
 import { PATTERNS, REGISTRATION_DIGITS } from "../_shared/rules.ts";
 
 /**
- * Origins allowed to call this. Set ALLOWED_ORIGINS as a comma separated list.
- * Left unset, only localhost works, which fails closed rather than open.
+ * Origins allowed to call this. ALLOWED_ORIGINS is a comma separated list.
+ *
+ * Read per request, not once at module load. A module level constant is only
+ * re-read when an instance restarts, so changing the secret appears to do
+ * nothing until something happens to recycle the function, which is a
+ * miserable thing to debug at the point where nobody can submit.
+ *
+ * Firebase serves every site on a .web.app domain as well as any custom one,
+ * and the custom domain usually arrives days later. Both are allowed by
+ * default so the deployment is testable before DNS exists.
  */
-const ALLOWED = (Deno.env.get("ALLOWED_ORIGINS") ?? "")
-  .split(",")
-  .map((o) => o.trim())
-  .filter(Boolean)
-  .concat([
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:4173",
-  ]);
+const DEFAULT_ORIGINS = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:4173",
+  "https://iecse-apply.web.app",
+  "https://iecse-apply.firebaseapp.com",
+  "https://apply.iecse-manipal.com",
+];
+
+function allowedOrigins(): string[] {
+  return (Deno.env.get("ALLOWED_ORIGINS") ?? "")
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean)
+    .concat(DEFAULT_ORIGINS);
+}
 
 function corsHeaders(origin: string | null): Record<string, string> {
-  const allow = origin && ALLOWED.includes(origin) ? origin : ALLOWED[0] ?? "";
-  return {
-    "Access-Control-Allow-Origin": allow,
+  const headers: Record<string, string> = {
     "Access-Control-Allow-Headers": "authorization, content-type, apikey",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Vary": "Origin",
   };
+
+  // Only echo an origin that is actually allowed. Echoing the first entry of
+  // the list instead produced "has a value X that is not equal to the supplied
+  // origin", which reads like the server is misconfigured rather than like the
+  // caller is not on the list.
+  if (origin && allowedOrigins().includes(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+
+  return headers;
 }
 
 const json = (

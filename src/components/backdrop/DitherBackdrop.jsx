@@ -311,7 +311,11 @@ float gridOf(float pixelSize) {
 }
 
 float levelsOf() {
-  return max(2.0, floor(colorNum + 0.5));
+  // Continuous again. It was snapped to whole steps because the eased progress
+  // never settled, so stepSize changed every frame and cells near a boundary
+  // flickered forever. The ease lands exactly now, so the tone can develop
+  // smoothly as the form fills and then hold still.
+  return max(2.0, colorNum);
 }
 
 vec3 quantize(vec2 uv, vec3 color, float grid) {
@@ -643,7 +647,16 @@ export default function DitherBackdrop({
       // 1920 runs off both edges at 1024 tall or on a phone. Clamped here to
       // whatever actually fits either side of sealCenter, which means the
       // wish can be raised without reintroducing a cropped S.
-      const [cx] = quality.sealCenter;
+      // The mark sits right of centre only where the layout actually puts the
+      // sheet on the left and the rail on the right, which is the lg grid at
+      // 1024 and up. Below that the sheet is full width, so an offset mark has
+      // less room either side and the clamp below shrinks it to nothing: at
+      // 800x1496 it came out 448px tall and entirely behind the card. Centred,
+      // it is as large as the width allows and reads around the card edges.
+      const wideLayout = width >= 1024;
+      const cx = wideLayout ? quality.sealCenter[0] : 0.5;
+      waveProgram.uniforms.sealCenter.value.set(cx, quality.sealCenter[1]);
+
       const room = Math.min(cx, 1 - cx) - EDGE_MARGIN;
       waveProgram.uniforms.sealScale.value = Math.min(
         quality.sealScale,
@@ -839,6 +852,13 @@ export default function DitherBackdrop({
       /* ---- resolve dials ---- */
       const k = Math.min(1, delta * 2.2);
       smoothedProgress = lerp(smoothedProgress, target, k);
+      // An exponential ease approaches the target but never reaches it, so
+      // anything derived from it keeps changing by a hair forever. That is
+      // what forced the level count to be snapped: cells near a rounding
+      // boundary flickered indefinitely. Landing it exactly lets the tone
+      // develop continuously while the applicant fills the form, and hold
+      // still once they stop.
+      if (Math.abs(target - smoothedProgress) < 0.0005) smoothedProgress = target;
       const resolved = smoothedProgress;
 
       const wu = waveProgram.uniforms;
@@ -852,7 +872,7 @@ export default function DitherBackdrop({
       // Floor raised from 0.3. The mark is meant to develop as the form fills,
       // not to be absent until it does: at 0.3 the logo was quieter than the
       // noise around it, so a fresh page read as a random field.
-      wu.sealMix.value = lerp(0.65, 1, resolved) * intro;
+      wu.sealMix.value = lerp(0.55, 1, resolved) * intro;
       // Halved. This sets how fast the noise carries cells across their
       // dither threshold, which is the rest of the flicker.
       wu.waveSpeed.value = running ? lerp(0.024, 0.036, resolved) : 0;
