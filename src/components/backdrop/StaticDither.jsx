@@ -94,7 +94,10 @@ function drawField(canvas, seed, cssWidth, cssHeight) {
         const cell =
           Math.floor(markY * LOGO_GRID) * LOGO_GRID +
           Math.floor(markX * LOGO_GRID);
-        value = mark[cell] * 0.72;
+        // Matches the shader's mark term at its resting strength: sealMix
+        // floor times (0.80 + f * 0.5). Without this the still version showed
+        // the glyph far fainter than the live one.
+        value = mark[cell] * 0.65 * 0.95;
       }
 
       /* Two octaves of value noise, the cheap stand-in for the shader FBM. */
@@ -102,7 +105,7 @@ function drawField(canvas, seed, cssWidth, cssHeight) {
         valueNoise(u * 5 * aspect, v * 5) * 0.6 +
         valueNoise(u * 11 * aspect, v * 11) * 0.4;
 
-      value += 0.13 + noise * 0.44;
+      value += 0.06 + noise * 0.18;
 
       /*
        * The shader quantises per channel, after subtracting a bias. That bias

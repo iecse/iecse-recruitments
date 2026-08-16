@@ -233,7 +233,18 @@ void main() {
   // old mark was an 11x11 blob covering most of the viewport, so most of what
   // looked like "the field" was actually the mark. A real glyph occupies far
   // less area, and with the ground this low everything outside it went dark.
-  float ground = 0.13 + f * (0.30 + (1.0 - sealMix) * 0.22);
+  // The noise carried too much of the frame at low progress. It was lifted by
+  // (1 - sealMix) * 0.22, so an empty form got the strongest possible ground at
+  // the same moment the mark was at its weakest, and the two fought. The mark
+  // has to win from the first frame: it is the club's, and an applicant landing
+  // on a wall of noise has no idea what they are looking at.
+  // Tuned against what the quantiser can actually show, not by eye. At three
+  // levels there is only {0, 0.5, 1}, so ground and mark both landing on "lit"
+  // makes them one step apart in blue alone, which reads as one noisy field
+  // rather than a shape on a background. Ground is set so roughly a quarter to
+  // a third of its cells clear the bias and none reach the top step; the mark
+  // lights all of its cells and a good share of them brightly.
+  float ground = 0.06 + f * (0.16 + (1.0 - sealMix) * 0.04);
   float value = ground + mark * sealMix * (0.80 + f * 0.5);
 
   // The wake is a blend toward the hot end of the same ramp, and nothing is
@@ -832,7 +843,10 @@ export default function DitherBackdrop({
       wu.waveColor.value[2] = lerp(COLOR_START[2], COLOR_END[2], resolved);
       wu.waveAmplitude.value = lerp(0.42, 0.55, resolved);
       // Latent at the start, fully developed by submission.
-      wu.sealMix.value = lerp(0.3, 1, resolved) * intro;
+      // Floor raised from 0.3. The mark is meant to develop as the form fills,
+      // not to be absent until it does: at 0.3 the logo was quieter than the
+      // noise around it, so a fresh page read as a random field.
+      wu.sealMix.value = lerp(0.65, 1, resolved) * intro;
       // Halved. This sets how fast the noise carries cells across their
       // dither threshold, which is the rest of the flicker.
       wu.waveSpeed.value = running ? lerp(0.024, 0.036, resolved) : 0;
