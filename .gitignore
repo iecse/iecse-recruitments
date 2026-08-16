@@ -35,3 +35,6 @@ supabase_migration.sql
 # Locally installed agent skills: bulky, third-party, licensed separately.
 # Remove this line if the club wants them tracked.
 .claude/skills/
+
+# Firebase deploy cache. Rewritten on every deploy; not source.
+.firebase/
