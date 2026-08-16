@@ -539,25 +539,57 @@ export default function RecruitmentPage() {
                 <ApplicantCard form={form} compact />
               ) : (
                 /* Reserved space is worse than useless when empty, so before
-                   there is a mark to show it carries the facts an applicant
-                   would otherwise scroll back up to check. */
-                <dl className="flex flex-col gap-4 rounded-md border border-line bg-ink/95 p-5">
-                  {[
-                    ["Membership", `Rs ${MEMBERSHIP_FEE}`],
-                    ["Steps", `${LAST_STEP}, saved as you go`],
-                    ["Time", "About 6 minutes"],
-                    ["Payment", "Checked by hand, a few days"],
-                  ].map(([term, value]) => (
-                    <div key={term} className="flex flex-col gap-1">
-                      <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-faint">
-                        {term}
-                      </dt>
-                      <dd className="text-[13px] leading-snug text-muted">
-                        {value}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
+                   there is a mark to show it explains the thing the committee
+                   otherwise answers by hand all through recruitment: that the
+                   fee is once, not yearly, and that membership is what makes
+                   you eligible for a committee later. */
+                <div className="flex flex-col gap-5 rounded-md border border-line bg-ink/95 p-5">
+                  <div className="flex flex-col gap-1">
+                    <h2 className="font-mono text-[10px] uppercase tracking-[0.14em] text-faint">
+                      Membership
+                    </h2>
+                    <p className="font-mono text-[19px] leading-none text-paper">
+                      Rs {MEMBERSHIP_FEE}
+                    </p>
+                    <p className="text-[12px] leading-snug text-faint">
+                      once, not every year
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-3 border-t border-line pt-4">
+                    <p className="text-[13px] leading-relaxed text-muted">
+                      Membership runs for the rest of your degree. Take it in
+                      first year and it holds through second, third and fourth.
+                    </p>
+                    <p className="text-[13px] leading-relaxed text-muted">
+                      It is also what lets you stand for Working or Management
+                      Committee &mdash; including a year later, without paying
+                      again.
+                    </p>
+                    <p className="text-[13px] leading-relaxed text-muted">
+                      Members get the workshops, bootcamps and study material
+                      the club keeps for them, and are added to the members
+                      group once payment clears.
+                    </p>
+                  </div>
+
+                  <dl className="flex flex-col gap-4 border-t border-line pt-4">
+                    {[
+                      ["Steps", `${LAST_STEP}, saved as you go`],
+                      ["Time", "About 6 minutes"],
+                      ["Payment", "Checked by hand, a few days"],
+                    ].map(([term, value]) => (
+                      <div key={term} className="flex flex-col gap-1">
+                        <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-faint">
+                          {term}
+                        </dt>
+                        <dd className="text-[13px] leading-snug text-muted">
+                          {value}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
               )}
             </div>
           </aside>

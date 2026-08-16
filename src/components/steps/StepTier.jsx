@@ -1,4 +1,4 @@
-import { tiersForYear } from "../../lib/constants";
+import { MEMBERSHIP_FEE, tiersForYear } from "../../lib/constants";
 import { AlertIcon, Check } from "../ui/icons";
 
 /**
@@ -14,13 +14,28 @@ export default function StepTier({ form, errors, update }) {
     <fieldset className="flex flex-col gap-4">
       <legend className="sr-only">Choose a tier</legend>
 
-      <p className="text-[13px] leading-relaxed text-faint">
-        {form.year
-          ? `These are the options open to ${form.year.toLowerCase()} applicants.`
-          : "The difference is what you take on."}{" "}
-        Every tier pays the same Rs 250 with the application. The committee
-        tiers also involve a short interview.
-      </p>
+      <div className="flex flex-col gap-3">
+        <p className="text-[13px] leading-relaxed text-faint">
+          {form.year
+            ? `These are the options open to ${form.year.toLowerCase()} applicants.`
+            : "The difference is what you take on."}{" "}
+          Every tier pays the same Rs {MEMBERSHIP_FEE} with the application, and
+          every tier makes you a member. The committee tiers also involve a
+          short interview.
+        </p>
+
+        {/* The thing applicants get wrong most often, and the reason the
+            committee has to answer it by hand every year: membership is not
+            annual, and it is the prerequisite for standing for a committee.
+            Stated here because this is the screen where the choice is made. */}
+        <p className="rounded-md border border-line bg-surface p-4 text-[13px] leading-relaxed text-muted">
+          Membership lasts the rest of your degree. Take it in first year and it
+          carries through second, third and fourth &mdash; there is nothing to
+          renew and nothing to buy again. It is also what qualifies you to stand
+          for a committee, so joining as a member now and applying for one next
+          year is a normal route, not a step backwards.
+        </p>
+      </div>
 
       <div className="flex flex-col gap-3">
         {tiers.map((tier) => {

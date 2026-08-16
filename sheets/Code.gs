@@ -67,10 +67,95 @@ function onOpen() {
     SpreadsheetApp.getUi()
       .createMenu("IECSE")
       .addItem("Refresh from database", "refreshFromApi")
+      .addSeparator()
+      .addItem("Why is this not updating?", "diagnose")
       .addToUi();
   } catch (e) {
     // No UI to attach to. Not an error worth surfacing.
   }
+}
+
+/**
+ * Why the sheet is not updating.
+ *
+ * "It stopped working" has three causes that need three different fixes, and
+ * they are indistinguishable from inside the sheet. Run this from the editor
+ * and read the log: it checks each one in the order it can fail and says
+ * which it is, rather than leaving whoever is on duty to guess.
+ *
+ * Run: pick diagnose in the function dropdown, press Run, then View > Logs.
+ */
+function diagnose() {
+  // Built with fromCharCode so this file carries no escape sequences: the
+  // last two times it was edited through a shell, a backslash was eaten and
+  // the damage was invisible until it ran.
+  var NL = String.fromCharCode(10);
+  var out = [];
+  var props = PropertiesService.getScriptProperties();
+  var base = (props.getProperty("API_BASE") || "").replace(new RegExp("/+$"), "");
+  var token = props.getProperty("EXPORT_TOKEN");
+  var sheetId = props.getProperty("SHEET_ID");
+
+  out.push("API_BASE      " + (base || "NOT SET"));
+  out.push("EXPORT_TOKEN  " + (token ? "set, " + token.length + " chars" : "NOT SET"));
+  out.push("SHEET_ID      " + (sheetId ? "set" : "not set (fine if bound to the sheet)"));
+
+  if (!base || !token) {
+    out.push("");
+    out.push("STOP. Set the missing property in Project Settings, Script properties.");
+    Logger.log(out.join(NL));
+    return out.join(NL);
+  }
+
+  try {
+    var book = openBook();
+    out.push("spreadsheet   OK, " + book.getName());
+  } catch (e) {
+    out.push("spreadsheet   FAILED, " + e.message);
+  }
+
+  try {
+    var h = UrlFetchApp.fetch(base + "/applications/health", { muteHttpExceptions: true });
+    out.push("health        HTTP " + h.getResponseCode());
+  } catch (e2) {
+    out.push("health        UNREACHABLE, " + e2.message);
+  }
+
+  var r = UrlFetchApp.fetch(base + "/applications/export", {
+    method: "get",
+    headers: { Authorization: "Bearer " + token },
+    muteHttpExceptions: true,
+  });
+  var code = r.getResponseCode();
+  out.push("export        HTTP " + code);
+  out.push("");
+
+  if (code === 200) {
+    var rows = (JSON.parse(r.getContentText()).rows || []).length;
+    out.push("The API is fine and returned " + rows + " applications.");
+    out.push("Nothing is broken: the refresh has simply not been run.");
+    out.push("Use the IECSE menu, Refresh from database. To stop having to:");
+    out.push("Triggers, add a time driven trigger on refreshFromApi.");
+  } else if (code === 401) {
+    out.push("The token here does not match the one on Supabase.");
+    out.push("Usually because EXPORT_TOKEN was rotated on one side only.");
+    out.push("Set both to the same value:");
+    out.push("  supabase secrets set EXPORT_TOKEN=<value>");
+    out.push("  then paste that same <value> into Script properties here.");
+  } else if (code === 404) {
+    out.push("The export route is not answering.");
+    out.push("Either the function has not been deployed since the route was");
+    out.push("added, which is the usual cause, or EXPORT_TOKEN is unset on");
+    out.push("Supabase. Deploy with:");
+    out.push("  supabase functions deploy applications --no-verify-jwt");
+  } else if (code === 429) {
+    out.push("Rate limited. Exports are capped per hour. Wait and retry.");
+  } else {
+    out.push("Unexpected: " + r.getContentText().slice(0, 300));
+  }
+
+  Logger.log(out.join(NL));
+  return out.join(NL);
 }
 
 function refreshFromApi() {

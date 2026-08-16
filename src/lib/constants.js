@@ -83,11 +83,14 @@ export const TIERS = [
     value: "member",
     name: "Member",
     commitment: "No interview",
-    summary: "Access to every session, workshop, and internal event we run.",
+    summary:
+      "Membership is for the rest of your degree. Take it once and it holds through second, third and fourth year.",
     points: [
-      "Every workshop, talk and internal event",
-      "Members only resources and recordings",
-      "Join project teams when they open up",
+      "Workshops, bootcamps and study material kept for members",
+      "Members only resources and session recordings",
+      "Added to the members group automatically once your payment clears",
+      "Never expires, and never has to be bought again",
+      "Being a member is what lets you stand for a committee, this year or a later one",
     ],
   },
   {
@@ -96,7 +99,7 @@ export const TIERS = [
     commitment: "Interview required",
     summary: "You ship the work. Projects, events, and the technical output.",
     points: [
-      "Everything a member gets",
+      "Everything a member gets, membership included",
       "Own deliverables on club projects",
       "Run sessions inside your domain",
     ],
@@ -107,7 +110,7 @@ export const TIERS = [
     commitment: "Interview required",
     summary: "You run the club. Direction, budget, and the people side.",
     points: [
-      "Everything a member gets",
+      "Everything a member gets, membership included",
       "Set direction for a domain and its projects",
       "Lead recruitment, partnerships and the budget",
     ],
