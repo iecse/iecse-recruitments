@@ -50,7 +50,7 @@ Nothing here needs a global install. `npx` fetches the CLIs.
 | The two SQL files | Supabase dashboard, SQL Editor, in a browser. Not a terminal. |
 | `supabase ...` | Any terminal, in the repo root |
 | `npm run build` | Any terminal, in the repo root |
-| `firebase ...` | Any terminal, in the repo root |
+| `firebase-tools ...` | Any terminal, in the repo root |
 | DNS record | Wherever iecse-manipal.com is managed |
 
 The project ref is in the dashboard URL, or Project Settings, General,
@@ -116,18 +116,20 @@ is unset, and the deployed page calls `/api`, which does not exist on a static
 host. Every submission 404s and the page gives no clue why.
 
 Deploy `dist/` to any static host. On Firebase, in the same project as the club
-site:
+site. Note the package is `firebase-tools`, not `firebase`: `npx firebase` looks
+for the client SDK, which has no command line tool, and fails with "could not
+determine executable to run".
 
 ```bash
-npx firebase login
+npx firebase-tools login
 ```
 
 ```bash
-npx firebase hosting:sites:create iecse-apply
+npx firebase-tools hosting:sites:create iecse-apply
 ```
 
 ```bash
-npx firebase deploy --only hosting
+npx firebase-tools deploy --only hosting:apply
 ```
 
 ### 4. DNS
