@@ -19,7 +19,6 @@ import {
   STORAGE_KEY,
   isTierAllowed,
   mapServerFields,
-  paysOnApplication,
   stepForFields,
   stepsForTier,
   toApplicationPayload,
@@ -95,12 +94,9 @@ export default function RecruitmentPage() {
   const progress = submitted ? 1 : completionRatio(form);
   const hasIdentity = form.registrationNumber.trim().length >= 6;
   const sealSeed = hasIdentity ? form.registrationNumber.trim() : "iecse";
-  // Step 5 reads as "Payment" for members and "Submit" for interview tiers.
-  const steps = stepsForTier(form.tier);
-  // Interview tiers are not asked for the fee unless they are selected. The
-  // payment step and the confirmation both say so; the header and the rail
-  // were stating it flatly on every screen and contradicting them.
-  const paysNow = paysOnApplication(form.tier) || !form.tier;
+  const steps = stepsForTier();
+  // Every tier pays the fee with the application, so the header and the rail
+  // state it flatly again.
   const active = steps.find((entry) => entry.id === step) || steps[0];
 
   /* ----------------------------------------------------------------- state */
@@ -393,7 +389,6 @@ export default function RecruitmentPage() {
                       rupees nor anything else. */}
                   <span className="normal-case">
                     Rs {MEMBERSHIP_FEE}
-                    {!paysNow && " if selected"}
                   </span>
                   <span aria-hidden="true">/</span>
                   <span>
@@ -508,12 +503,7 @@ export default function RecruitmentPage() {
                    would otherwise scroll back up to check. */
                 <dl className="flex flex-col gap-4 rounded-md border border-line bg-ink/95 p-5">
                   {[
-                    [
-                      "Membership",
-                      paysNow
-                        ? `Rs ${MEMBERSHIP_FEE}`
-                        : `Rs ${MEMBERSHIP_FEE}, only if selected`,
-                    ],
+                    ["Membership", `Rs ${MEMBERSHIP_FEE}`],
                     ["Steps", `${LAST_STEP}, saved as you go`],
                     ["Time", "About 6 minutes"],
                     ["Payment", "Checked by hand, a few days"],

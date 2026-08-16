@@ -18,7 +18,7 @@ import {
   VALID_TIERS,
   VALID_YEARS,
   WHY_JOIN_MIN,
-  paysOnApplication,
+  requiresInterview,
 } from "./rules.ts";
 
 /**
@@ -175,15 +175,11 @@ export function validateApplication(
     }
   }
 
-  /* ---- payment, required only for the tier that pays on application ---- */
-  const paysNow = paysOnApplication(tier);
-  if (paysNow) {
-    if (isBlank(body.payment_id)) {
-      errors.payment_id = "Payment ID is required for member tier.";
-    } else if (!PATTERNS.payment.test(String(body.payment_id).trim())) {
-      errors.payment_id =
-        "Payment ID must be 8 to 64 alphanumeric characters.";
-    }
+  /* ---- payment, required for every tier ---- */
+  if (isBlank(body.payment_id)) {
+    errors.payment_id = "Payment reference is required.";
+  } else if (!PATTERNS.payment.test(String(body.payment_id).trim())) {
+    errors.payment_id = "Payment ID must be 8 to 64 alphanumeric characters.";
   }
 
   /* ---- optional URLs ---- */
@@ -223,8 +219,11 @@ export function validateApplication(
       projects: orNull(body.projects),
       tier,
       payment_status: "pending",
-      payment_id: paysNow ? orNull(body.payment_id) : null,
-      interview_status: paysNow ? "not_required" : "pending",
+      payment_id: orNull(body.payment_id),
+      // From the tier, not from whether they paid. Everyone pays now, so
+      // deriving this from payment would mark every applicant as needing no
+      // interview.
+      interview_status: requiresInterview(tier) ? "pending" : "not_required",
     },
   };
 }

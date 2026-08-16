@@ -4,7 +4,7 @@
  * announced through aria-describedby.
  */
 
-import { BRANCHES, isTierAllowed, paysOnApplication } from "./constants";
+import { BRANCHES, isTierAllowed } from "./constants";
 /* The single source for every pattern and bound. The API imports the same
    file, so the two cannot disagree about what is valid. Anything checked in
    both places must come from here rather than be written out twice. */
@@ -129,9 +129,6 @@ function validateTier(form) {
 function validatePayment(form) {
   const errors = {};
 
-  // Interview tiers have nothing to pay yet, so there is nothing to validate.
-  if (!paysOnApplication(form.tier)) return errors;
-
   if (isBlank(form.paymentId)) {
     errors.paymentId = "Enter the transaction ID or UTR from your payment.";
   } else if (!PATTERNS.payment.test(form.paymentId.trim())) {
@@ -184,7 +181,7 @@ export function completionRatio(form) {
     form.whyJoin,
     form.tier,
     // Only counted when the applicant actually owes a payment now.
-    ...(paysOnApplication(form.tier) ? [form.paymentId] : []),
+    form.paymentId,
   ];
   const optional = [
     form.projects,

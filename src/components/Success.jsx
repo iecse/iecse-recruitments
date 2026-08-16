@@ -3,7 +3,7 @@ import {
   MEMBERSHIP_FEE,
   TIERS,
   WHATSAPP_GROUP_LINK,
-  paysOnApplication,
+  requiresInterview,
 } from "../lib/constants";
 import { CheckCircle, ExternalLink } from "./ui/icons";
 import { Seal } from "./Seal";
@@ -18,24 +18,20 @@ export default function Success({ form }) {
   }, []);
 
   const tier = TIERS.find((entry) => entry.value === form.tier);
-  const paid = paysOnApplication(form.tier);
-  const needsInterview = !paid;
+  // Everyone pays with the application now. Whether they are interviewed is a
+  // separate question and comes from the tier.
+  const needsInterview = requiresInterview(form.tier);
   const registration = form.registrationNumber.trim();
 
   const timeline = [
-    paid
-      ? {
-          title: "We match your payment",
-          body: `Someone checks reference ${form.paymentId.trim()} against the club account. This usually takes a few days.`,
-        }
-      : {
-          title: "We read your application",
-          body: "The committee goes through every application for the domains you picked. Nothing is owed while that happens.",
-        },
+    {
+      title: "We match your payment",
+      body: `Someone checks reference ${form.paymentId.trim()} against the club account. This usually takes a few days.`,
+    },
     needsInterview
       ? {
           title: "You get an interview slot",
-          body: `${tier ? tier.name : "This tier"} needs a short conversation about your domains. We will contact you via WhatsApp at ${form.phoneNumber.trim()}. The Rs ${MEMBERSHIP_FEE} fee is only asked for if you are selected.`,
+          body: `${tier ? tier.name : "This tier"} needs a short conversation about your domains. We will contact you via WhatsApp at ${form.phoneNumber.trim()}.`,
         }
       : {
           title: "You are on the list",
@@ -93,12 +89,10 @@ export default function Success({ form }) {
           Screenshot this
         </p>
         <p className="font-mono text-[15px] text-paper">
-          {paid ? form.paymentId.trim() : registration}
+          {form.paymentId.trim()}
         </p>
         <p className="text-[12px] leading-relaxed text-faint">
-          {paid
-            ? `Your payment reference, against registration ${registration}. Quote it if you need to chase this up.`
-            : "Your registration number. Quote it if you need to chase this up."}
+          {`Your payment reference, against registration ${registration}. Quote it if you need to chase this up.`}
         </p>
       </div>
 
@@ -134,9 +128,9 @@ export default function Success({ form }) {
           <ExternalLink size={15} strokeWidth={2.2} aria-hidden="true" />
         </a>
         <p className="text-[12px] leading-relaxed text-faint">
-          {paid
-            ? `Membership is Rs ${MEMBERSHIP_FEE} and covers everything the club runs.`
-            : `If you are selected, membership is Rs ${MEMBERSHIP_FEE} and covers everything the club runs.`}
+          {needsInterview
+            ? `Membership is Rs ${MEMBERSHIP_FEE} and covers everything the club runs. The interview decides which committee you join.`
+            : `Membership is Rs ${MEMBERSHIP_FEE} and covers everything the club runs.`}
         </p>
       </div>
     </div>

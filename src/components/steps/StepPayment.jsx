@@ -4,7 +4,6 @@ import {
   MEMBERSHIP_FEE,
   TIERS,
   UPI_ACCOUNTS,
-  paysOnApplication,
 } from "../../lib/constants";
 import { Check, Copy, ShieldCheck } from "../ui/icons";
 import { useCoarsePointer } from "../../lib/hooks";
@@ -125,39 +124,6 @@ function UpiCard({ account, amount, reference, coarse }) {
 export default function StepPayment({ form, errors, update, onToggleConfirm }) {
   const tier = TIERS.find((entry) => entry.value === form.tier);
   const coarse = useCoarsePointer();
-
-  // Working and Management Committee are interview tiers. They pay on
-  // selection, not now, so this step has nothing to collect from them.
-  if (!paysOnApplication(form.tier)) {
-    return (
-      <div className="flex flex-col gap-6">
-        <div className="rounded-md border border-line-strong bg-surface-strong p-5">
-          <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-faint">
-            Nothing to pay yet
-          </p>
-          <p className="mt-3 text-[14px] leading-relaxed text-muted">
-            {tier ? tier.name : "This tier"} is interview based. Submit now, and
-            if you are selected you will be asked for the Rs {MEMBERSHIP_FEE}
-            {" "}membership fee then. Applying costs nothing.
-          </p>
-        </div>
-
-        <div className="flex items-start gap-3 rounded-md border border-line bg-surface p-4">
-          <ShieldCheck
-            size={17}
-            strokeWidth={2}
-            className="mt-[2px] shrink-0 text-cyan"
-            aria-hidden="true"
-          />
-          <p className="text-[13px] leading-relaxed text-faint">
-            You will be contacted via WhatsApp at {form.phoneNumber.trim() || "your phone number"}
-            {" "}to schedule a short conversation about the domains you picked.
-            Nothing else is needed from you until then.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col gap-7">

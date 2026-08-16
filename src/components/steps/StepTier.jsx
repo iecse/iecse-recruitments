@@ -18,8 +18,8 @@ export default function StepTier({ form, errors, update }) {
         {form.year
           ? `These are the options open to ${form.year.toLowerCase()} applicants.`
           : "The difference is what you take on."}{" "}
-        Member is the only one that pays while applying; the committee tiers are
-        interview based and pay on selection.
+        Every tier pays the same Rs 250 with the application. The committee
+        tiers also involve a short interview.
       </p>
 
       <div className="flex flex-col gap-3">

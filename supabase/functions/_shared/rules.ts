@@ -77,8 +77,17 @@ export const TIERS_BY_YEAR: Record<string, string[]> = {
   "2nd Year": ["member", "mancomm"],
 };
 
-/** Only Member pays on application. The rest pay if they are selected. */
-export const paysOnApplication = (tier: string) => tier === "member";
+/**
+ * Every tier pays the fee with the application. This used to be true only of
+ * Member, with the committee tiers paying on selection.
+ *
+ * Whether a tier is interviewed is a SEPARATE question and must stay separate:
+ * interview_status used to be derived from this predicate because the two
+ * happened to coincide, and collapsing them again would mark every applicant
+ * as needing no interview.
+ */
+export const requiresInterview = (tier: string) =>
+  tier === "workcomm" || tier === "mancomm";
 
 export const URL_FIELDS = [
   "github_url",

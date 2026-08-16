@@ -22,6 +22,8 @@ export const YEARS = ["1st Year", "2nd Year"];
 /* Same list the API validates against, so the dropdown cannot offer something
    that would be rejected on submit. */
 export { VALID_BRANCHES as BRANCHES } from "../../supabase/functions/_shared/rules";
+/* Re-exporting does not bind the name locally, and this file uses it below. */
+import { requiresInterview } from "../../supabase/functions/_shared/rules";
 
 export const DOMAINS = [
   {
@@ -51,21 +53,20 @@ export const STEPS = [
 ];
 
 /**
- * Only Member applications pay while applying. Working and Management Committee
- * are interview tiers, so they pay if and when they are selected. This is the
- * single source of that rule: validation, the payload and the final step all
+ * Every tier pays the fee with the application. Whether a tier is interviewed
+ * is a separate question, and the two must not be collapsed back together:
+ * interview_status used to be derived from who paid, because the two happened
+ * to coincide, and reusing that would mark every applicant as needing no
+ * interview. This is the single source of that rule:
  * read it rather than testing the tier string themselves.
  */
-export const paysOnApplication = (tier) => tier === "member";
+/* Re-exported so the client and the API agree on which tiers are interviewed.
+   Every tier pays with the application; interviewing is a separate question. */
+export { requiresInterview } from "../../supabase/functions/_shared/rules";
 
-/** Step 5 is a payment step for members and a review step for everyone else. */
-export function stepsForTier(tier) {
-  if (paysOnApplication(tier) || !tier) return STEPS;
-  return STEPS.map((entry) =>
-    entry.id === 5
-      ? { ...entry, label: "Submit", title: "Review and submit" }
-      : entry
-  );
+/** Step 5 is the payment step for every tier. */
+export function stepsForTier() {
+  return STEPS;
 }
 
 /*
@@ -255,10 +256,13 @@ export function toApplicationPayload(form) {
     certifications: orNull(form.certifications),
     projects: orNull(form.projects),
     tier: form.tier,
-    // Still "pending" for interview tiers: they have not paid, and they will
-    // owe the same fee on selection. Nothing new for the committee to learn.
+    // Every applicant owes the fee, so every row starts unreconciled and the
+    // committee marks it verified once they match the reference.
     payment_status: "pending",
-    payment_id: paysOnApplication(form.tier) ? orNull(form.paymentId) : null,
-    interview_status: form.tier === "member" ? "not_required" : "pending",
+    payment_id: orNull(form.paymentId),
+    // Same predicate the API uses, rather than a second copy of the rule. The
+    // server overwrites this anyway, but two spellings of one rule is how they
+    // drift apart.
+    interview_status: requiresInterview(form.tier) ? "pending" : "not_required",
   };
 }
