@@ -10,6 +10,9 @@
  *   2. Project Settings -> Script properties, add:
  *        API_BASE      https://<ref>.supabase.co/functions/v1
  *        EXPORT_TOKEN  the same value as the EXPORT_TOKEN Supabase secret
+ *        SHEET_ID      only if this project is NOT bound to the sheet, ie if
+ *                      you created it at script.google.com rather than from
+ *                      Extensions -> Apps Script inside the sheet
  *   3. Run refreshFromApi once from the editor to grant permissions.
  *   4. Optional: Triggers -> add a time driven trigger on refreshFromApi.
  *
@@ -55,11 +58,19 @@ var COLUMNS = [
 /** Not written by the refresh. Whatever the committee types here survives. */
 var NOTES_HEADER = "Notes";
 
+/**
+ * Only fires for a script bound to the sheet. A standalone project never runs
+ * this, which is fine: there the refresh is run from the editor or a trigger.
+ */
 function onOpen() {
-  SpreadsheetApp.getUi()
-    .createMenu("IECSE")
-    .addItem("Refresh from database", "refreshFromApi")
-    .addToUi();
+  try {
+    SpreadsheetApp.getUi()
+      .createMenu("IECSE")
+      .addItem("Refresh from database", "refreshFromApi")
+      .addToUi();
+  } catch (e) {
+    // No UI to attach to. Not an error worth surfacing.
+  }
 }
 
 function refreshFromApi() {
@@ -93,7 +104,7 @@ function refreshFromApi() {
   if (code !== 200) throw new Error("Export failed with HTTP " + code + ": " + response.getContentText().slice(0, 200));
 
   var rows = JSON.parse(response.getContentText()).rows || [];
-  var book = SpreadsheetApp.getActiveSpreadsheet();
+  var book = openBook();
 
   TABS.forEach(function (tab) {
     writeTab(book, tab.name, rows.filter(function (r) { return r.tier === tab.tier; }));
@@ -175,6 +186,31 @@ function columnLetter(n) {
     n = (n - m - 1) / 26;
   }
   return s;
+}
+
+/**
+ * The spreadsheet to write to.
+ *
+ * getActiveSpreadsheet() only returns something when the script is bound to a
+ * sheet, which happens if you open it through Extensions -> Apps Script from
+ * inside the sheet. A project created at script.google.com is standalone and
+ * gets null, which surfaces as "Cannot read properties of null".
+ *
+ * So a standalone project works too: put the spreadsheet's id in a SHEET_ID
+ * script property. The id is the long string in its URL, between /d/ and /edit.
+ */
+function openBook() {
+  var id = PropertiesService.getScriptProperties().getProperty("SHEET_ID");
+  if (id) return SpreadsheetApp.openById(id.trim());
+
+  var active = SpreadsheetApp.getActiveSpreadsheet();
+  if (active) return active;
+
+  throw new Error(
+    "This script is not attached to a spreadsheet. Either open it from the " +
+    "sheet via Extensions -> Apps Script, or add a SHEET_ID script property " +
+    "holding the id from the sheet's URL (the part between /d/ and /edit)."
+  );
 }
 
 /** Registration number -> whatever is in the Notes column today. */
