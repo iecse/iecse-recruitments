@@ -47,8 +47,9 @@ export default function StepIdentity({ form, errors, update, onRegistrationBlur,
           role="status"
           className="rounded-md border border-alert/40 bg-alert/[0.07] px-4 py-3 text-[13px] leading-relaxed text-paper"
         >
-          An application already exists for this registration number. Submitting
-          again will be rejected, so check with the committee before you carry on.
+          An application already exists for this registration number. If that was
+          not you, mail hello@iecse-manipal.com with your registration number
+          and we will clear it so you can apply.
         </p>
       )}
 

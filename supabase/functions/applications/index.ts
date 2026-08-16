@@ -18,7 +18,7 @@
 // deploy bundler uploads only the function's own .ts files: deno.json does not
 // go with them, so the bare form resolves locally and fails at deploy time.
 import { createClient } from "jsr:@supabase/supabase-js@^2.112.3";
-import { validateApplication } from "../_shared/validate.ts";
+import { looksAutomated, validateApplication } from "../_shared/validate.ts";
 import { PATTERNS, REGISTRATION_DIGITS } from "../_shared/rules.ts";
 
 /**
@@ -303,6 +303,21 @@ Deno.serve(async (req) => {
         return json({ error: "Malformed request." }, 400, origin);
       }
 
+      // Before validation, so an automated post never reaches the database and
+      // never learns which of its fields were wrong.
+      const automated = looksAutomated(body);
+      if (automated) {
+        console.warn(`[app] submission refused as automated: ${automated}`);
+        return json(
+          {
+            error:
+              "That submission could not be accepted. If you are filling this in yourself, wait a moment and try again, and tell the committee if it keeps happening.",
+          },
+          400,
+          origin,
+        );
+      }
+
       const { valid, errors, cleaned } = validateApplication(body);
       // Narrowed rather than asserted with !, so a future change to
       // validateApplication that forgets to build a row is a type error here
@@ -329,7 +344,7 @@ Deno.serve(async (req) => {
           return json(
             {
               error:
-                `An application with this ${field} already exists. Contact the committee if that was not you.`,
+                `An application with this ${field} already exists. If that was not you, mail hello@iecse-manipal.com with your registration number and we will clear it so you can apply.`,
               code: "DUPLICATE",
             },
             409,

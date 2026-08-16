@@ -155,10 +155,22 @@ hand rolled — use Supabase Auth.
 
 ## Known gaps
 
-**No bot protection.** Rate limiting is all there is. A script that rotates
-addresses can still submit junk, and nothing here would stop it. The reason to
-care is not the rows, it is the committee reconciling them by hand. Turnstile
-or hCaptcha on the submit step is the fix and it is not done.
+**Bot protection is only the cheap half.** A hidden field and a minimum fill
+time refuse scripted posting, and both are checked server side before anything
+touches the database. Neither stops somebody who opens the page first and
+scripts against what they see; they are there because they cost an applicant
+nothing, not because they are sufficient. Turnstile on the submit step is the
+real answer and is not done: it needs `script-src https://challenges.cloudflare.com`
+in the CSP, which is a deliberate widening of something currently set to `'self'`.
+
+**Squatting is the threat that matters, not junk rows.** Registration number,
+email and phone are all unique, and the duplicate check endpoint says which
+numbers are free, so a script can lock real students out by applying under
+their numbers. Prevention is never total, so the important part is that it is
+recoverable: the duplicate message names an address to write to, and RUNBOOK.md
+tells whoever is on duty how to identify a junk row and delete it. If clashes
+start arriving in bursts rather than one at a time, that is an attack, not
+coincidence.
 
 **The duplicate check is an enumeration oracle.** `GET
 /applications/check/:regNo` answers whether a registration number has

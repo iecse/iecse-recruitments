@@ -92,6 +92,22 @@ export const TIERS_BY_YEAR: Record<string, string[]> = {
 export const requiresInterview = (tier: string) =>
   tier === "workcomm" || tier === "mancomm";
 
+/**
+ * Cheap automation checks. Both catch scripted posting; neither stops somebody
+ * who looks at the page first, and they are not meant to. They exist because
+ * they cost an applicant nothing.
+ *
+ * HONEYPOT_FIELD is hidden from people and from assistive technology, so any
+ * value in it came from something filling every input it found.
+ *
+ * MIN_FILL_SECONDS is measured from when the draft was first created, not from
+ * page load, because a returning applicant restores a saved draft and may
+ * submit within seconds of opening the page. Nobody writes a 40 character
+ * answer and a payment reference in under this.
+ */
+export const HONEYPOT_FIELD = "website";
+export const MIN_FILL_SECONDS = 20;
+
 export const URL_FIELDS = [
   "github_url",
   "linkedin_url",

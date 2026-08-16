@@ -8,7 +8,9 @@
  */
 
 import {
+  HONEYPOT_FIELD,
   MAX,
+  MIN_FILL_SECONDS,
   PATTERNS,
   REGISTRATION_DIGITS,
   TIERS_BY_YEAR,
@@ -61,6 +63,38 @@ export interface ValidationResult {
   valid: boolean;
   errors: Record<string, string>;
   cleaned: Record<string, unknown> | null;
+}
+
+/**
+ * Whether a submission looks automated.
+ *
+ * Returned separately from field errors on purpose. These are not things an
+ * applicant can correct, so telling them which check failed only helps whoever
+ * is trying to get past it. The caller answers with a single generic message.
+ */
+export function looksAutomated(body: Record<string, unknown>): string | null {
+  const honeypot = body[HONEYPOT_FIELD];
+  if (typeof honeypot === "string" && honeypot.trim().length > 0) {
+    return `honeypot filled: ${honeypot.slice(0, 40)}`;
+  }
+
+  const startedAt = Number(body.started_at);
+  if (!Number.isFinite(startedAt) || startedAt <= 0) {
+    // Absent or unparseable. Every real submission carries it.
+    return "started_at missing";
+  }
+
+  const elapsed = (Date.now() - startedAt) / 1000;
+  if (elapsed < MIN_FILL_SECONDS) {
+    return `filled in ${elapsed.toFixed(1)}s`;
+  }
+  // A clock far in the future, or a draft claiming to be a year old, is not a
+  // person with a slow morning.
+  if (elapsed < 0 || elapsed > 60 * 60 * 24 * 90) {
+    return `started_at implausible: ${elapsed.toFixed(0)}s ago`;
+  }
+
+  return null;
 }
 
 export function validateApplication(

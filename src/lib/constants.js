@@ -63,6 +63,7 @@ export const STEPS = [
 /* Re-exported so the client and the API agree on which tiers are interviewed.
    Every tier pays with the application; interviewing is a separate question. */
 export { requiresInterview } from "../../supabase/functions/_shared/rules";
+import { HONEYPOT_FIELD } from "../../supabase/functions/_shared/rules";
 
 /** Step 5 is the payment step for every tier. */
 export function stepsForTier() {
@@ -157,6 +158,13 @@ export const DEFAULT_FORM = {
   tier: "",
   paymentId: "",
   paymentConfirmed: false,
+  /* Never shown and never filled by a person. Anything in it came from
+     something filling every input it could find. */
+  website: "",
+  /* When this draft was first created, not when the page last loaded. A
+     returning applicant restores a saved draft and may submit within seconds
+     of opening the page, so page load would reject them. */
+  startedAt: 0,
 };
 
 /**
@@ -241,6 +249,11 @@ export function toApplicationPayload(form) {
   };
 
   return {
+    // Not columns. The API reads them to judge whether the submission was
+    // typed by a person, then drops them; they never reach the table.
+    [HONEYPOT_FIELD]: form.website || "",
+    started_at: form.startedAt || 0,
+
     full_name: form.fullName.trim(),
     year: form.year,
     registration_number: form.registrationNumber.trim(),

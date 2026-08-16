@@ -37,11 +37,11 @@ const LAST_STEP = STEPS.length;
 function readDraft() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return { form: DEFAULT_FORM, step: 1 };
+    if (!saved) return { form: { ...DEFAULT_FORM, startedAt: Date.now() }, step: 1 };
 
     const parsed = JSON.parse(saved);
     if (!parsed || typeof parsed !== "object") {
-      return { form: DEFAULT_FORM, step: 1 };
+      return { form: { ...DEFAULT_FORM, startedAt: Date.now() }, step: 1 };
     }
 
     const savedForm =
@@ -51,9 +51,14 @@ function readDraft() {
         ? parsed.step
         : 1;
 
-    return { form: { ...DEFAULT_FORM, ...savedForm }, step: savedStep };
+    const form = { ...DEFAULT_FORM, ...savedForm };
+    // Stamped once, when the draft first exists. Drafts saved before this
+    // field was added have no value, and get one now rather than being
+    // treated as instant submissions.
+    if (!form.startedAt) form.startedAt = Date.now();
+    return { form, step: savedStep };
   } catch {
-    return { form: DEFAULT_FORM, step: 1 };
+    return { form: { ...DEFAULT_FORM, startedAt: Date.now() }, step: 1 };
   }
 }
 
@@ -279,7 +284,7 @@ export default function RecruitmentPage() {
       return;
     }
     clear();
-    setForm(DEFAULT_FORM);
+    setForm({ ...DEFAULT_FORM, startedAt: Date.now() });
     setErrors({});
     setSubmitError("");
     setDuplicate(false);
@@ -416,6 +421,26 @@ export default function RecruitmentPage() {
                 <Success form={form} />
               ) : (
                 <form onSubmit={handleSubmit} noValidate>
+                  {/* Not for people. Positioned away rather than display:none,
+                      which is the first thing a scraper checks for, and hidden
+                      from assistive technology and from tab order so it is
+                      never an obstacle for anyone filling this in for real. */}
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute left-[-9999px] top-0 h-0 w-0 overflow-hidden"
+                  >
+                    <label htmlFor="website">Website</label>
+                    <input
+                      id="website"
+                      name="website"
+                      type="text"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      value={form.website}
+                      onChange={update("website")}
+                    />
+                  </div>
+
                   <div className="hidden lg:block">
                     <StepTrack step={step} onJump={jumpTo} steps={steps} />
                   </div>

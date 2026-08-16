@@ -1,0 +1,129 @@
+# Runbook
+
+For whoever is on duty while applications are open. Written for someone who did
+not build this.
+
+Everything here needs access to the Supabase dashboard for the RECRUITEMENTS
+project, and most of it happens in the SQL Editor.
+
+## Someone cannot apply: "an application already exists"
+
+The likeliest cause is boring: they already applied and forgot, or a friend
+used their number by mistake. The unpleasant cause is that somebody submitted
+junk under their registration number, which locks them out, because
+registration number, email and phone are all unique.
+
+**Do not assume either. Look first.**
+
+```sql
+select id, created_at, full_name, registration_number, learner_email,
+       phone_number, tier, payment_id
+from public.applications
+where registration_number = 'THEIR_NUMBER';
+```
+
+If the row is plainly theirs, tell them so; they are done.
+
+If it is not theirs — a name they do not recognise, a nonsense email, a payment
+reference that matches nothing in the club account — delete it so they can
+apply:
+
+```sql
+delete from public.applications where id = THE_ID;
+```
+
+Note the id before deleting. If several arrive at once, that is a pattern worth
+telling whoever maintains this, not a series of one-off deletions.
+
+The same applies when the clash is on email or phone: change the `where` to
+`learner_email` or `phone_number`.
+
+## Someone says the form rejected them and they are not a robot
+
+The API refuses submissions that look automated. It says only "that submission
+could not be accepted", on purpose, because a specific reason is a hint to
+whoever is trying to get past it.
+
+Two things trigger it:
+
+- a hidden field was filled, which no person can do by hand
+- the application was completed in under 20 seconds, measured from when their
+  draft was first created, not from page load
+
+A real applicant hits the second only by pasting a saved draft into a fresh
+browser and submitting instantly. Ask them to reload and try again.
+
+The function logs the actual reason. In the Supabase dashboard, Edge Functions,
+`applications`, Logs, look for `submission refused as automated`.
+
+## Marking a payment as received
+
+The committee reconciles by hand. When a UPI reference matches the club
+account:
+
+```sql
+update public.applications
+set payment_status = 'verified'
+where registration_number = 'THEIR_NUMBER';
+```
+
+Allowed values are `pending`, `verified` and `rejected`. The schema enforces
+that, so a typo fails rather than writing a status nothing reads.
+
+The Google Sheet tints unreconciled rows pink, so `pending` is what to work
+through. The Sheet is a copy: editing it changes nothing here. Run the update
+above, then refresh the Sheet.
+
+## Interview status
+
+Members are `not_required`. Working and Management Committee start `pending`.
+As you schedule and complete:
+
+```sql
+update public.applications
+set interview_status = 'scheduled'
+where registration_number = 'THEIR_NUMBER';
+```
+
+Allowed: `pending`, `not_required`, `scheduled`, `done`.
+
+## The Sheet is not updating
+
+In order of likelihood:
+
+1. Nobody ran the refresh. It is not automatic unless a time trigger was added.
+   IECSE menu, Refresh from database, or run `refreshFromApi` in Apps Script.
+2. `EXPORT_TOKEN` was rotated on Supabase but not in the Apps Script properties.
+   They must match exactly.
+3. The export route is not deployed. `curl` it: no token should give 401, and
+   404 means the function needs deploying.
+
+## Nobody can submit at all
+
+Check in this order, stopping when one fails:
+
+```bash
+curl.exe -s https://ucoupqqibqbqdacmeuob.supabase.co/functions/v1/applications/health
+curl.exe -sI https://apply.iecse-manipal.com
+```
+
+- Health failing means the function is down or was deleted.
+- The page failing means Firebase Hosting or DNS.
+- Both fine but submissions failing from the site is usually CORS: the origin
+  has to be in `ALLOWED_ORIGINS`, and the browser console says so plainly.
+
+## Rate limiting stopped working
+
+It fails open on purpose: a broken limiter must never stop somebody applying.
+It says so in the logs. Look for `RATE LIMITING IS NOT ACTIVE` in the function
+logs; the usual cause is `supabase/rate-limit.sql` never having been run on
+this project.
+
+## Before recruitment opens
+
+- [ ] `select count(*) from public.applications;` returns 0, no test rows left
+- [ ] `EXPORT_TOKEN` rotated if it was ever pasted into a chat, a screenshot or
+      a message
+- [ ] Sheet refreshes and shows three tabs
+- [ ] One real application submitted end to end and then deleted
+- [ ] Someone other than the person who set this up knows where this file is
