@@ -434,6 +434,13 @@ function writeTab(book, name, rows) {
   var notes = readNotes(sheet);
 
   sheet.clear();
+  // clear() drops content and formatting but leaves data validation rules in
+  // place. This sheet has never had a dropdown in this revision, but a sheet
+  // that once did (or will again) leaves cells that reject anything outside
+  // the old list, and the very next refresh throws trying to write into them.
+  // Clearing validation on the whole sheet, not just the current data range,
+  // catches leftover rules on columns or rows this run no longer touches.
+  sheet.getRange(1, 1, sheet.getMaxRows(), sheet.getMaxColumns()).clearDataValidations();
 
   var headers = COLUMNS.map(function (c) { return c.header; }).concat([NOTES_HEADER]);
   var values = [headers];
