@@ -124,3 +124,27 @@ export const URL_FIELDS = [
   "portfolio_url",
   "other_links",
 ];
+
+/**
+ * The two columns the committee maintains by hand after an application lands,
+ * and the only values the database will accept for them.
+ *
+ * These mirror the check constraints in schema.sql. They live here because
+ * three places need to agree on them: the API route that accepts an update,
+ * the Google Sheet that offers them as a dropdown, and the schema that has the
+ * final say. A value added in the schema and not here is silently unofferable;
+ * one added here and not there fails the insert, which is the safe direction.
+ */
+export const PAYMENT_STATUSES = ["pending", "verified", "rejected"];
+export const INTERVIEW_STATUSES = [
+  "pending",
+  "not_required",
+  "scheduled",
+  "done",
+];
+
+/** Columns a token holder may write through the status route. Nothing else. */
+export const WRITABLE_STATUS_FIELDS: Record<string, string[]> = {
+  payment_status: PAYMENT_STATUSES,
+  interview_status: INTERVIEW_STATUSES,
+};

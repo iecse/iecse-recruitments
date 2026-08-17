@@ -19,7 +19,11 @@
 // go with them, so the bare form resolves locally and fails at deploy time.
 import { createClient } from "jsr:@supabase/supabase-js@^2.112.3";
 import { looksAutomated, validateApplication } from "../_shared/validate.ts";
-import { PATTERNS, REGISTRATION_DIGITS } from "../_shared/rules.ts";
+import {
+  PATTERNS,
+  REGISTRATION_DIGITS,
+  WRITABLE_STATUS_FIELDS,
+} from "../_shared/rules.ts";
 
 /**
  * Origins allowed to call this. ALLOWED_ORIGINS is a comma separated list.
@@ -254,6 +258,120 @@ Deno.serve(async (req) => {
           },
         },
       );
+    }
+
+    /* ---------------------------------------------------------- status */
+    /**
+     * Update the two columns the committee maintains by hand.
+     *
+     * The Google Sheet is where payments actually get reconciled, so the sheet
+     * has to be able to write back rather than being a read only copy that
+     * throws the committee's work away on the next refresh. The alternative was
+     * to let the sheet hold the truth for these columns and merge on refresh,
+     * which means two sources disagreeing the moment anyone runs the SQL in the
+     * runbook instead. This keeps the database authoritative: the sheet edit is
+     * a request to change it, and the next refresh reads back what actually
+     * stuck.
+     *
+     * Deliberately narrow. It can set payment_status and interview_status, to
+     * one of their allowed values, on a row that already exists. It cannot
+     * insert, delete, change any other column, or touch a registration number
+     * that is not already in the table. That matters because it shares
+     * EXPORT_TOKEN: that token already reads every applicant's personal data,
+     * so the incremental risk of a leak is two enum flags rather than anything
+     * new, and a second secret for a student committee to keep in sync is a
+     * reliability problem of its own.
+     *
+     * Not CORS enabled, same as export. The caller is Apps Script.
+     */
+    if (req.method === "POST" && path === "/status") {
+      const expected = Deno.env.get("EXPORT_TOKEN")?.trim();
+      const plain = { "Content-Type": "application/json", "Cache-Control": "no-store" };
+
+      if (!expected) {
+        console.error("[app] status requested but EXPORT_TOKEN is not set");
+        return new Response(JSON.stringify({ error: "Not found" }), { status: 404, headers: plain });
+      }
+
+      const presented = (req.headers.get("authorization") ?? "")
+        .replace(/^Bearer /i, "")
+        .trim();
+
+      if (!timingSafeEqual(presented, expected)) {
+        console.warn("[app] status rejected: bad token");
+        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: plain });
+      }
+
+      if (await overLimit(req, "status", 300, 60 * 60)) {
+        return new Response(JSON.stringify({ error: "Too many updates." }), { status: 429, headers: plain });
+      }
+
+      let body: Record<string, unknown>;
+      try {
+        body = await req.json();
+      } catch {
+        return new Response(JSON.stringify({ error: "Malformed request." }), { status: 400, headers: plain });
+      }
+
+      const regNo = String(body.registration_number ?? "").trim();
+      if (!PATTERNS.digitsOnly.test(regNo) || regNo.length !== REGISTRATION_DIGITS) {
+        return new Response(
+          JSON.stringify({ error: "Invalid registration number." }),
+          { status: 400, headers: plain },
+        );
+      }
+
+      /* Built from the allowlist, not from the request body, so an extra key in
+         the payload cannot reach the table however it is spelled. */
+      const patch: Record<string, string> = {};
+      for (const [field, allowed] of Object.entries(WRITABLE_STATUS_FIELDS)) {
+        if (!(field in body)) continue;
+        const value = String(body[field] ?? "").trim();
+        if (!allowed.includes(value)) {
+          return new Response(
+            JSON.stringify({
+              error: `${field} must be one of: ${allowed.join(", ")}.`,
+            }),
+            { status: 400, headers: plain },
+          );
+        }
+        patch[field] = value;
+      }
+
+      if (Object.keys(patch).length === 0) {
+        return new Response(
+          JSON.stringify({ error: "Nothing to update." }),
+          { status: 400, headers: plain },
+        );
+      }
+
+      const { data, error } = await admin
+        .from("applications")
+        .update(patch)
+        .eq("registration_number", regNo)
+        .select("registration_number, payment_status, interview_status");
+
+      if (error) {
+        console.error("[app] status update failed:", error.message);
+        return new Response(
+          JSON.stringify({ error: "Update failed." }),
+          { status: 500, headers: plain },
+        );
+      }
+
+      /* An update that matched nothing is not a success. Without this the sheet
+         would show a value that was never stored anywhere. */
+      if (!data || data.length === 0) {
+        return new Response(
+          JSON.stringify({ error: `No application with registration number ${regNo}.` }),
+          { status: 404, headers: plain },
+        );
+      }
+
+      console.log(
+        `[app] status updated: ${regNo} ${JSON.stringify(patch)}`,
+      );
+      return new Response(JSON.stringify({ updated: data[0] }), { status: 200, headers: plain });
     }
 
     /* ----------------------------------------------------------- check */

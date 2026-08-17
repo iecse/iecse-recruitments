@@ -24,8 +24,8 @@ where registration_number = 'THEIR_NUMBER';
 
 If the row is plainly theirs, tell them so; they are done.
 
-If it is not theirs — a name they do not recognise, a nonsense email, a payment
-reference that matches nothing in the club account — delete it so they can
+If it is not theirs, a name they do not recognise, a nonsense email, a payment
+reference that matches nothing in the club account, delete it so they can
 apply:
 
 ```sql
@@ -58,8 +58,26 @@ The function logs the actual reason. In the Supabase dashboard, Edge Functions,
 
 ## Marking a payment as received
 
-The committee reconciles by hand. When a UPI reference matches the club
-account:
+Do it in the Sheet. Change the Payment cell to `verified` and it saves to the
+database as you make the change. The cell is a dropdown, so the only options are
+the ones the database accepts.
+
+Unreconciled rows are tinted pink, so `pending` is what to work through.
+
+If a write fails, the cell gets a note saying why, and the next refresh puts the
+cell back to whatever the database actually holds. A cell that silently reverts
+means the write did not land: read the note, or run `diagnose`.
+
+This needs the write-back trigger installed. `diagnose` reports whether it is;
+`installAutoRefresh` installs it along with the scheduled refresh.
+
+The Interview column works the same way, with `pending`, `not_required`,
+`scheduled` and `done`.
+
+The database is still the source of truth. The Sheet edit is a request to change
+it, and the refresh reads back what actually stuck, so the two cannot drift.
+
+SQL still works if you prefer it, or if the Sheet is broken:
 
 ```sql
 update public.applications
@@ -70,22 +88,11 @@ where registration_number = 'THEIR_NUMBER';
 Allowed values are `pending`, `verified` and `rejected`. The schema enforces
 that, so a typo fails rather than writing a status nothing reads.
 
-The Google Sheet tints unreconciled rows pink, so `pending` is what to work
-through. The Sheet is a copy: editing it changes nothing here. Run the update
-above, then refresh the Sheet.
-
 ## Interview status
 
 Members are `not_required`. Working and Management Committee start `pending`.
-As you schedule and complete:
-
-```sql
-update public.applications
-set interview_status = 'scheduled'
-where registration_number = 'THEIR_NUMBER';
-```
-
-Allowed: `pending`, `not_required`, `scheduled`, `done`.
+Change the Interview cell in the Sheet as you schedule and complete, the same
+way as Payment above. Allowed: `pending`, `not_required`, `scheduled`, `done`.
 
 ## The Sheet is not updating
 

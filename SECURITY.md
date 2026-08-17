@@ -18,6 +18,7 @@ strings and Postgres connection URLs. The only match is the
 | `SUPABASE_SERVICE_ROLE_KEY` | injected by Supabase in production, `supabase/.env.local` locally | no |
 | `SUPABASE_URL` | same | no |
 | `ALLOWED_ORIGINS` | `supabase secrets set` | no |
+| `EXPORT_TOKEN` | `supabase secrets set`, and Apps Script script properties | no |
 
 `supabase/.env.local` is gitignored. The frontend has no database client of
 any kind: it posts to the Edge Function, which holds the credentials. There is no
@@ -27,6 +28,30 @@ the bundle and is therefore public by definition.
 **The service role key must never be given to the frontend.** It bypasses row
 level security. If a committee dashboard is built later, it gets its own
 authenticated role and its own policy, not this key.
+
+`EXPORT_TOKEN` is the committee's token, held by the Google Apps Script behind
+the Sheet. It is the most sensitive thing after the service role key, because it
+reads every applicant's name, email, phone number and payment reference in bulk
+through `GET /export`.
+
+It also authorises `POST /status`, which is how the Sheet writes payment and
+interview decisions back. That route is deliberately the narrowest thing that
+does the job: it sets `payment_status` or `interview_status`, to one of the
+values in `WRITABLE_STATUS_FIELDS`, on a registration number that already
+exists. It cannot insert, delete, or write any other column, and the patch is
+built from the allowlist rather than from the request body, so an extra key in
+the payload cannot reach the table.
+
+Reusing one token for read and write was a deliberate trade. A leak of it
+already meant every applicant's personal data; the increment is two enum flags
+on rows that already exist, against the cost of a second secret that a student
+committee has to keep in sync across a rotation. Both routes withhold CORS
+headers, so no browser can call either whatever token it has.
+
+Rotate it by setting `supabase secrets set EXPORT_TOKEN=...` and pasting the
+same value into the Apps Script properties. They must match exactly, and
+rotating one side only is the commonest reason the Sheet stops working; the
+script's `diagnose` reports that case by name.
 
 ## Database
 
@@ -151,7 +176,7 @@ There are no user accounts, no passwords, no sessions and no cookies, so
 password hashing, session cookie flags and login rate limiting have nothing to
 apply to. There are no file uploads. Should a committee login ever be added,
 that is the point at which all four come back and none of them should be
-hand rolled — use Supabase Auth.
+hand rolled, use Supabase Auth.
 
 ## Known gaps
 
@@ -181,7 +206,7 @@ applied, which is a real kindness. The trade is deliberate but it is a trade,
 and if it is not worth it, delete the route and the client call in
 `src/api.js`.
 
-**Drafts hold personal data in `localStorage` in plain text** — name, email,
+**Drafts hold personal data in `localStorage` in plain text**, name, email,
 phone and registration number, so the form survives a refresh. It is cleared
 on successful submit, but on a shared lab machine an abandoned draft persists.
 Anyone who does not finish should use `Clear draft`.

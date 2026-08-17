@@ -102,7 +102,8 @@ function diagnose() {
   out.push("API_BASE      " + (base || "NOT SET"));
   out.push("EXPORT_TOKEN  " + (token ? "set, " + token.length + " chars" : "NOT SET"));
   out.push("SHEET_ID      " + (sheetId ? "set, so this project is standalone" : "not set, so this project is bound to the sheet"));
-  out.push("auto refresh  " + (countRefreshTriggers() > 0 ? countRefreshTriggers() + " trigger(s) installed" : "NOT INSTALLED, nothing refreshes on its own"));
+  out.push("auto refresh  " + (countTriggers("refreshFromApi") > 0 ? "installed" : "NOT INSTALLED, nothing refreshes on its own"));
+  out.push("write-back    " + (countTriggers("onSheetEdit") > 0 ? "installed, sheet edits save to the database" : "NOT INSTALLED, edits will be overwritten on refresh"));
 
   if (!base || !token) {
     out.push("");
@@ -139,7 +140,7 @@ function diagnose() {
     out.push("The API is fine and returned " + rows + " applications.");
     out.push("Nothing is broken. The data is there, the refresh just has not run.");
     out.push("");
-    if (countRefreshTriggers() > 0) {
+    if (countTriggers("refreshFromApi") > 0) {
       out.push("A trigger IS installed, so this should be refreshing on its own.");
       out.push("Check Executions in the left sidebar for a failing run.");
     } else {
@@ -177,6 +178,141 @@ function diagnose() {
 }
 
 /**
+ * The columns the committee may edit in the sheet, and what they map to.
+ *
+ * These values are duplicated from supabase/functions/_shared/rules.ts because
+ * Apps Script cannot import it. The duplication is safe in one direction only:
+ * the API validates every value against its own allowlist and rejects anything
+ * else, so a stale entry here fails loudly on write rather than storing junk.
+ * The dropdown is convenience; the API is the guard.
+ */
+var EDITABLE_COLUMNS = {
+  "Payment": {
+    field: "payment_status",
+    values: ["pending", "verified", "rejected"],
+  },
+  "Interview": {
+    field: "interview_status",
+    values: ["pending", "not_required", "scheduled", "done"],
+  },
+};
+
+/**
+ * Push a Payment or Interview edit back to the database.
+ *
+ * Installed as an edit trigger, not written as a simple onEdit: a simple
+ * onEdit runs without authorisation and cannot call UrlFetchApp at all, so it
+ * would appear to work and silently never reach Supabase.
+ *
+ * The database stays authoritative. This sends the edit, and the next refresh
+ * reads back whatever actually stuck. If the write fails the cell is put back
+ * the way it was, because a cell showing "verified" when the database says
+ * "pending" is worse than an edit that visibly did not take.
+ */
+function onSheetEdit(e) {
+  if (!e || !e.range) return;
+
+  var sheet = e.range.getSheet();
+  if (!isTierTab(sheet.getName())) return;
+  if (e.range.getRow() === 1) return;
+
+  var lastCol = sheet.getLastColumn();
+  var header = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var regCol = header.indexOf("Reg no") + 1;
+  if (!regCol) return;
+
+  var failures = [];
+  var sent = 0;
+
+  // Iterate the edited range rather than reading e.value, so a paste down a
+  // column of twenty rows works the same as changing one cell.
+  for (var c = 0; c < e.range.getNumColumns(); c += 1) {
+    var colIndex = e.range.getColumn() + c;
+    var spec = EDITABLE_COLUMNS[header[colIndex - 1]];
+    if (!spec) continue;
+
+    for (var r = 0; r < e.range.getNumRows(); r += 1) {
+      var rowIndex = e.range.getRow() + r;
+      var cell = sheet.getRange(rowIndex, colIndex);
+      var value = String(cell.getValue() || "").trim();
+      var regNo = String(sheet.getRange(rowIndex, regCol).getValue() || "").trim();
+
+      // The "No applications in this tier yet" placeholder has no reg number.
+      if (!regNo) continue;
+
+      if (spec.values.indexOf(value) === -1) {
+        failures.push(regNo + ": " + value + " is not a valid " + spec.field);
+        cell.setNote("Not a valid value. Allowed: " + spec.values.join(", "));
+        continue;
+      }
+
+      var result = pushStatus(regNo, spec.field, value);
+      if (result.ok) {
+        sent += 1;
+        cell.clearNote();
+      } else {
+        failures.push(regNo + ": " + result.error);
+        cell.setNote("Not saved to the database: " + result.error);
+      }
+    }
+  }
+
+  if (sent > 0 && failures.length === 0) {
+    toast(e.source, sent + " saved to the database", "IECSE");
+  } else if (failures.length > 0) {
+    toast(e.source, failures.length + " failed, see the cell note", "IECSE");
+    Logger.log(failures.join(String.fromCharCode(10)));
+  }
+}
+
+/** One status write. Returns { ok: true } or { ok: false, error: string }. */
+function pushStatus(regNo, field, value) {
+  var props = PropertiesService.getScriptProperties();
+  var base = (props.getProperty("API_BASE") || "").replace(new RegExp("/+$"), "");
+  var token = props.getProperty("EXPORT_TOKEN");
+  if (!base || !token) return { ok: false, error: "API_BASE or EXPORT_TOKEN not set" };
+
+  var payload = { registration_number: regNo };
+  payload[field] = value;
+
+  try {
+    var r = UrlFetchApp.fetch(base + "/applications/status", {
+      method: "post",
+      contentType: "application/json",
+      headers: { Authorization: "Bearer " + token },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true,
+    });
+    if (r.getResponseCode() === 200) return { ok: true };
+    var msg;
+    try {
+      msg = JSON.parse(r.getContentText()).error || r.getContentText();
+    } catch (parseErr) {
+      msg = r.getContentText();
+    }
+    return { ok: false, error: "HTTP " + r.getResponseCode() + ", " + String(msg).slice(0, 160) };
+  } catch (err) {
+    return { ok: false, error: String(err).slice(0, 160) };
+  }
+}
+
+function isTierTab(name) {
+  for (var i = 0; i < TABS.length; i += 1) {
+    if (TABS[i].name === name) return true;
+  }
+  return false;
+}
+
+/** toast needs a UI. A standalone project has none. */
+function toast(book, message, title) {
+  try {
+    book.toast(message, title, 5);
+  } catch (e) {
+    Logger.log(title + ": " + message);
+  }
+}
+
+/**
  * Make the sheet refresh itself.
  *
  * This is the answer to "do I have to keep running it by hand". Run this
@@ -203,11 +339,21 @@ function installAutoRefresh() {
     .everyMinutes(MINUTES)
     .create();
 
-  var msg = "Auto refresh installed: every " + MINUTES + " minutes.";
-  if (removed > 0) {
-    msg = msg + " Replaced " + removed + " existing trigger(s).";
-  }
-  msg = msg + " Runs as " + Session.getEffectiveUser().getEmail() + ".";
+  // The write-back trigger. Installed here rather than in its own function so
+  // there is one thing to run: a sheet that pulls but cannot push is the
+  // problem this was added to solve.
+  ScriptApp.newTrigger("onSheetEdit")
+    .forSpreadsheet(openBook())
+    .onEdit()
+    .create();
+
+  var lines = [];
+  lines.push("Auto refresh installed: every " + MINUTES + " minutes.");
+  lines.push("Edit write-back installed: Payment and Interview changes now");
+  lines.push("save to the database as you make them.");
+  if (removed > 0) lines.push("Replaced " + removed + " existing trigger(s).");
+  lines.push("Both run as " + Session.getEffectiveUser().getEmail() + ".");
+  var msg = lines.join(String.fromCharCode(10));
   Logger.log(msg);
   return msg;
 }
@@ -217,7 +363,8 @@ function removeAutoRefresh() {
   var all = ScriptApp.getProjectTriggers();
   var n = 0;
   for (var i = 0; i < all.length; i += 1) {
-    if (all[i].getHandlerFunction() === "refreshFromApi") {
+    var fn = all[i].getHandlerFunction();
+    if (fn === "refreshFromApi" || fn === "onSheetEdit") {
       ScriptApp.deleteTrigger(all[i]);
       n += 1;
     }
@@ -226,12 +373,12 @@ function removeAutoRefresh() {
   return n;
 }
 
-/** How many refresh triggers are installed right now. */
-function countRefreshTriggers() {
+/** How many triggers are installed for a given handler. */
+function countTriggers(handler) {
   var all = ScriptApp.getProjectTriggers();
   var n = 0;
   for (var i = 0; i < all.length; i += 1) {
-    if (all[i].getHandlerFunction() === "refreshFromApi") n += 1;
+    if (all[i].getHandlerFunction() === handler) n += 1;
   }
   return n;
 }
@@ -276,11 +423,7 @@ function refreshFromApi() {
   // toast needs a UI. A standalone project has none, and this is the last line
   // of the refresh, so an unguarded call fails after all the work succeeded and
   // reads like the whole run failed.
-  try {
-    book.toast(rows.length + " applications loaded", "IECSE", 5);
-  } catch (e) {
-    Logger.log(rows.length + " applications loaded");
-  }
+  toast(book, rows.length + " applications loaded", "IECSE");
 }
 
 function writeTab(book, name, rows) {
@@ -331,8 +474,30 @@ function writeTab(book, name, rows) {
     .setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
 
   markUnpaid(sheet, values.length);
+  addStatusDropdowns(sheet, headers, values.length);
 }
 
+/**
+ * Dropdowns on the columns the committee edits.
+ *
+ * Stops the commonest write failure before it reaches the API: a typo, or
+ * "Verified" with a capital V, which the database check constraint rejects.
+ * Rejecting invalid input is the API's job; not offering it is this one.
+ */
+function addStatusDropdowns(sheet, headers, rowCount) {
+  if (rowCount < 2) return;
+  for (var name in EDITABLE_COLUMNS) {
+    if (!Object.prototype.hasOwnProperty.call(EDITABLE_COLUMNS, name)) continue;
+    var col = headers.indexOf(name) + 1;
+    if (!col) continue;
+    var rule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(EDITABLE_COLUMNS[name].values, true)
+      .setAllowInvalid(false)
+      .setHelpText("Pick one of: " + EDITABLE_COLUMNS[name].values.join(", "))
+      .build();
+    sheet.getRange(2, col, rowCount - 1, 1).setDataValidation(rule);
+  }
+}
 /** Rows still awaiting payment reconciliation, so they are easy to find. */
 function markUnpaid(sheet, rowCount) {
   if (rowCount < 2) return;
