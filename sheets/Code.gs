@@ -27,19 +27,8 @@
  * keyed on registration number.
  */
 
-/**
- * The three tabs, and which applications land in each.
- *
- * Members is everyone, not just the people who picked the member tier: every
- * tier pays the membership fee with the application, so every applicant is a
- * member. A tab holding only the member tier would have been a list of the
- * people who asked for the least, which is not a membership roll.
- *
- * tier null means no filter. The committee tabs stay filtered, because those
- * are working lists for interviews.
- */
 var TABS = [
-  { tier: null, name: "Members" },
+  { tier: "member", name: "Members" },
   { tier: "workcomm", name: "Working Committee" },
   { tier: "mancomm", name: "Management Committee" },
 ];
@@ -51,9 +40,6 @@ var COLUMNS = [
   { header: "Reg no", key: "registration_number", width: 120 },
   { header: "Year", key: "year", width: 80 },
   { header: "Branch", key: "branch", width: 230 },
-  /* Only meaningful since Members became everyone. Without it that tab cannot
-     tell a member from a committee applicant. */
-  { header: "Tier", key: "tier", width: 110 },
   { header: "Domains", key: "domain", width: 200 },
   { header: "Email", key: "learner_email", width: 230 },
   { header: "Phone", key: "phone_number", width: 120 },
@@ -227,7 +213,7 @@ function onSheetEdit(e) {
   if (!e || !e.range) return;
 
   var sheet = e.range.getSheet();
-  if (!isManagedTab(sheet.getName())) return;
+  if (!isTierTab(sheet.getName())) return;
   if (e.range.getRow() === 1) return;
 
   var lastCol = sheet.getLastColumn();
@@ -310,7 +296,7 @@ function pushStatus(regNo, field, value) {
   }
 }
 
-function isManagedTab(name) {
+function isTierTab(name) {
   for (var i = 0; i < TABS.length; i += 1) {
     if (TABS[i].name === name) return true;
   }
@@ -431,10 +417,7 @@ function refreshFromApi() {
   var book = openBook();
 
   TABS.forEach(function (tab) {
-    var forTab = tab.tier
-      ? rows.filter(function (r) { return r.tier === tab.tier; })
-      : rows;
-    writeTab(book, tab.name, forTab);
+    writeTab(book, tab.name, rows.filter(function (r) { return r.tier === tab.tier; }));
   });
 
   // toast needs a UI. A standalone project has none, and this is the last line
@@ -468,9 +451,9 @@ function writeTab(book, name, rows) {
 
   if (values.length === 1) {
     // Headers only. Say so rather than leaving a bare row that looks broken.
-    values.push([
-      name === "Members" ? "No applications yet" : "No applications in this tier yet",
-    ].concat(new Array(headers.length - 1).fill("")));
+    values.push(["No applications in this tier yet"].concat(
+      new Array(headers.length - 1).fill("")
+    ));
   }
 
   sheet.getRange(1, 1, values.length, headers.length).setValues(values);

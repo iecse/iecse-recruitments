@@ -56,20 +56,6 @@ browser and submitting instantly. Ask them to reload and try again.
 The function logs the actual reason. In the Supabase dashboard, Edge Functions,
 `applications`, Logs, look for `submission refused as automated`.
 
-## The three tabs
-
-**Members** is every application, whatever tier they applied for, because every
-tier pays the membership fee and so every applicant is a member. Use the Tier
-column to tell them apart.
-
-**Working Committee** and **Management Committee** hold only applications for
-that tier. They are working lists for interviews.
-
-So a committee applicant appears twice: once on Members and once on their
-committee tab. Editing their Payment or Interview cell on either tab saves to
-the database, but the other tab keeps showing the old value until the next
-refresh. That is cosmetic, not a conflict, and the refresh settles it.
-
 ## Marking a payment as received
 
 Do it in the Sheet. Change the Payment cell to `verified` and it saves to the
