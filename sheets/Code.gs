@@ -27,8 +27,19 @@
  * keyed on registration number.
  */
 
+/**
+ * The three tabs, and which applications land in each.
+ *
+ * Members is everyone, not just the people who picked the member tier: every
+ * tier pays the membership fee with the application, so every applicant is a
+ * member. A tab holding only the member tier would have been a list of the
+ * people who asked for the least, which is not a membership roll.
+ *
+ * tier null means no filter. The committee tabs stay filtered, because those
+ * are working lists for interviews.
+ */
 var TABS = [
-  { tier: "member", name: "Members" },
+  { tier: null, name: "Members" },
   { tier: "workcomm", name: "Working Committee" },
   { tier: "mancomm", name: "Management Committee" },
 ];
@@ -40,6 +51,9 @@ var COLUMNS = [
   { header: "Reg no", key: "registration_number", width: 120 },
   { header: "Year", key: "year", width: 80 },
   { header: "Branch", key: "branch", width: 230 },
+  /* Only meaningful since Members became everyone. Without it that tab cannot
+     tell a member from a committee applicant. */
+  { header: "Tier", key: "tier", width: 110 },
   { header: "Domains", key: "domain", width: 200 },
   { header: "Email", key: "learner_email", width: 230 },
   { header: "Phone", key: "phone_number", width: 120 },
@@ -213,7 +227,7 @@ function onSheetEdit(e) {
   if (!e || !e.range) return;
 
   var sheet = e.range.getSheet();
-  if (!isTierTab(sheet.getName())) return;
+  if (!isManagedTab(sheet.getName())) return;
   if (e.range.getRow() === 1) return;
 
   var lastCol = sheet.getLastColumn();
@@ -296,7 +310,7 @@ function pushStatus(regNo, field, value) {
   }
 }
 
-function isTierTab(name) {
+function isManagedTab(name) {
   for (var i = 0; i < TABS.length; i += 1) {
     if (TABS[i].name === name) return true;
   }
@@ -417,7 +431,10 @@ function refreshFromApi() {
   var book = openBook();
 
   TABS.forEach(function (tab) {
-    writeTab(book, tab.name, rows.filter(function (r) { return r.tier === tab.tier; }));
+    var forTab = tab.tier
+      ? rows.filter(function (r) { return r.tier === tab.tier; })
+      : rows;
+    writeTab(book, tab.name, forTab);
   });
 
   // toast needs a UI. A standalone project has none, and this is the last line
@@ -434,12 +451,11 @@ function writeTab(book, name, rows) {
   var notes = readNotes(sheet);
 
   sheet.clear();
-  // clear() drops content and formatting but leaves data validation rules in
-  // place. This sheet has never had a dropdown in this revision, but a sheet
-  // that once did (or will again) leaves cells that reject anything outside
-  // the old list, and the very next refresh throws trying to write into them.
-  // Clearing validation on the whole sheet, not just the current data range,
-  // catches leftover rules on columns or rows this run no longer touches.
+  // clear() drops content and formatting but leaves data validation rules
+  // behind. A rule written by an earlier run stays bound to the cell, and the
+  // next refresh throws trying to write a value the old rule rejects. Clearing
+  // across the whole sheet, not just the range about to be written, catches
+  // rules on rows and columns this run no longer touches.
   sheet.getRange(1, 1, sheet.getMaxRows(), sheet.getMaxColumns()).clearDataValidations();
 
   var headers = COLUMNS.map(function (c) { return c.header; }).concat([NOTES_HEADER]);
@@ -458,9 +474,9 @@ function writeTab(book, name, rows) {
 
   if (values.length === 1) {
     // Headers only. Say so rather than leaving a bare row that looks broken.
-    values.push(["No applications in this tier yet"].concat(
-      new Array(headers.length - 1).fill("")
-    ));
+    values.push([
+      name === "Members" ? "No applications yet" : "No applications in this tier yet",
+    ].concat(new Array(headers.length - 1).fill("")));
   }
 
   sheet.getRange(1, 1, values.length, headers.length).setValues(values);
@@ -481,7 +497,9 @@ function writeTab(book, name, rows) {
     .setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
 
   markUnpaid(sheet, values.length);
-  addStatusDropdowns(sheet, headers, values.length);
+  // rows, not values: values includes the placeholder row on an empty tab, and
+  // a dropdown on that cell is what makes the next refresh fail to overwrite it.
+  addStatusDropdowns(sheet, headers, rows.length);
 }
 
 /**
@@ -491,8 +509,8 @@ function writeTab(book, name, rows) {
  * "Verified" with a capital V, which the database check constraint rejects.
  * Rejecting invalid input is the API's job; not offering it is this one.
  */
-function addStatusDropdowns(sheet, headers, rowCount) {
-  if (rowCount < 2) return;
+function addStatusDropdowns(sheet, headers, dataRows) {
+  if (dataRows < 1) return;
   for (var name in EDITABLE_COLUMNS) {
     if (!Object.prototype.hasOwnProperty.call(EDITABLE_COLUMNS, name)) continue;
     var col = headers.indexOf(name) + 1;
@@ -502,7 +520,7 @@ function addStatusDropdowns(sheet, headers, rowCount) {
       .setAllowInvalid(false)
       .setHelpText("Pick one of: " + EDITABLE_COLUMNS[name].values.join(", "))
       .build();
-    sheet.getRange(2, col, rowCount - 1, 1).setDataValidation(rule);
+    sheet.getRange(2, col, dataRows, 1).setDataValidation(rule);
   }
 }
 /** Rows still awaiting payment reconciliation, so they are easy to find. */
