@@ -201,12 +201,16 @@ database, but preserved across refreshes, keyed on registration number.
 
 `sheets/InterviewSheet.gs` is a second, separate spreadsheet for Management
 Committee interviews. It pulls only applicants who are `tier: "mancomm"` with
-`payment_status: "verified"`, and adds an Interviewer, a 1-5 score per domain
-(Technical, AIML, Dev, Design, Publicity), a Total the sheet computes with a
-formula, and a Yes / No / Review decision. None of that is sent back to the
-database: `interview_status` there tracks whether an interview happened, not
-its outcome, and there is currently no column for an outcome. This sheet is
-the committee's working record for that instead.
+`payment_status: "verified"`, and adds an Assigned to column at the far left,
+an Interviewer, a 1-5 score per domain (Technical, AIML, Dev, Design,
+Publicity), a Total the sheet computes with a formula, and a Yes (green) / No
+(red) / Review (yellow) decision. Assigned to is who a candidate is scheduled
+with, decided before the interview; Interviewer is filled in after, and the
+two are kept separate because a slot can end up taken by someone other than
+who it was assigned to. None of this is sent back to the database:
+`interview_status` there tracks whether an interview happened, not its
+outcome, and there is currently no column for an outcome. This sheet is the
+committee's working record for that instead.
 
 Both scripts read `GET /applications/export`, which is the one endpoint that
 hands out personal data in bulk and is gated on a bearer token. Generate one:
