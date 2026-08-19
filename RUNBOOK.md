@@ -108,6 +108,30 @@ Members are `not_required`. Working and Management Committee start `pending`.
 Change the Interview cell in the Sheet as you schedule and complete, the same
 way as Payment above. Allowed: `pending`, `not_required`, `scheduled`, `done`.
 
+## Running Management Committee interviews
+
+A separate spreadsheet, `sheets/InterviewSheet.gs`, not the applications sheet.
+It only pulls Management Committee applicants whose payment is already
+`verified`, so mark payment first on the applications sheet; someone will not
+appear here until that is done.
+
+Each row has an Interviewer field, a 1-5 dropdown for Technical, AIML, Dev,
+Design and Publicity, a Total the sheet adds up itself, and a Yes, No or Review
+decision. All of that is preserved across refreshes the same way Notes is on
+the applications sheet, keyed on registration number, so a scheduled refresh
+mid-interview-season does not erase a score.
+
+None of it writes back to the database. There is no column there for an
+interview outcome, only for whether an interview happened, so this sheet is
+the record of the decision until that changes. Read it by hand when deciding
+final rosters.
+
+It shares `EXPORT_TOKEN` with the applications sheet: same value, same
+rotation. Its own `diagnose` reports the same three things the applications
+sheet's does, plus how many of the pulled rows are actually eligible, which is
+the thing to check first if the sheet looks emptier than expected: it usually
+means payment has not been marked verified yet, not that the sheet is broken.
+
 ## The Sheet is not updating
 
 Do not guess. In the Apps Script editor, run `diagnose` from the function
@@ -127,7 +151,7 @@ leaves or loses access to the sheet, it stops silently. Install it from an
 account that will outlast recruitment, and re-run `diagnose` if the sheet ever
 goes quiet again: it reports whether a trigger is installed.
 
-`installAutoRefresh` refreshes every 15 minutes. Change `MINUTES` at the top of
+`installAutoRefresh` refreshes every 5 minutes. Change `MINUTES` at the top of
 that function and run it again to change the interval; it replaces its own
 trigger rather than stacking a second one.
 

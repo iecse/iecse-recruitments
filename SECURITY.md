@@ -18,7 +18,7 @@ strings and Postgres connection URLs. The only match is the
 | `SUPABASE_SERVICE_ROLE_KEY` | injected by Supabase in production, `supabase/.env.local` locally | no |
 | `SUPABASE_URL` | same | no |
 | `ALLOWED_ORIGINS` | `supabase secrets set` | no |
-| `EXPORT_TOKEN` | `supabase secrets set`, and Apps Script script properties | no |
+| `EXPORT_TOKEN` | `supabase secrets set`, and script properties in two separate Apps Script projects | no |
 
 `supabase/.env.local` is gitignored. The frontend has no database client of
 any kind: it posts to the Edge Function, which holds the credentials. There is no
@@ -48,10 +48,18 @@ on rows that already exist, against the cost of a second secret that a student
 committee has to keep in sync across a rotation. Both routes withhold CORS
 headers, so no browser can call either whatever token it has.
 
+It is held by two separate Apps Script projects: the applications sheet, and
+the Management Committee interview sheet, which is its own spreadsheet with
+its own script. The interview sheet only calls `GET /export` and filters what
+it pulls to Management Committee applicants with `payment_status: "verified"`,
+so it never sees more than the applications sheet already does, and it has no
+write access at all, unlike the applications sheet's `POST /status`.
+
 Rotate it by setting `supabase secrets set EXPORT_TOKEN=...` and pasting the
-same value into the Apps Script properties. They must match exactly, and
-rotating one side only is the commonest reason the Sheet stops working; the
-script's `diagnose` reports that case by name.
+same value into the script properties of both Apps Script projects. They must
+all three match exactly, and rotating without updating every one is the
+commonest reason a Sheet stops working; each script's `diagnose` reports that
+case by name.
 
 ## Database
 

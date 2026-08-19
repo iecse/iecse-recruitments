@@ -186,26 +186,39 @@ Deploys to its own subdomain and is served from the root. If it ever moves under
 a path, set `VITE_BASE` (for example `VITE_BASE=/apply/`). The API is deployed
 separately; put its origin in `CORS_ORIGINS` and point `/api` at it.
 
-## The committee's Google Sheet
+## The committee's Google Sheets
 
-`sheets/Code.gs` is an Apps Script that pulls every application and rewrites
-three tabs: Members, Working Committee and Management Committee. Setup
-instructions are in the header of that file.
+Two separate Apps Script projects, each bound to its own spreadsheet. Setup
+instructions are in the header of each file.
 
-It reads `GET /applications/export`, which is the one endpoint that hands out
-personal data in bulk and is gated on a bearer token. Generate one:
+`sheets/Code.gs` pulls every application and rewrites three tabs: Members
+(everyone, since every tier pays the membership fee), Working Committee and
+Management Committee (filtered to that tier). Changing a Payment or Interview
+cell saves to the database as you make the change, through `POST
+/applications/status`; every other column is read only and reverts on the next
+refresh. The Notes column is the exception among those: never sent to the
+database, but preserved across refreshes, keyed on registration number.
+
+`sheets/InterviewSheet.gs` is a second, separate spreadsheet for Management
+Committee interviews. It pulls only applicants who are `tier: "mancomm"` with
+`payment_status: "verified"`, and adds an Interviewer, a 1-5 score per domain
+(Technical, AIML, Dev, Design, Publicity), a Total the sheet computes with a
+formula, and a Yes / No / Review decision. None of that is sent back to the
+database: `interview_status` there tracks whether an interview happened, not
+its outcome, and there is currently no column for an outcome. This sheet is
+the committee's working record for that instead.
+
+Both scripts read `GET /applications/export`, which is the one endpoint that
+hands out personal data in bulk and is gated on a bearer token. Generate one:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-Set the same value in both places: `supabase secrets set EXPORT_TOKEN=...` and
-the Apps Script's Script properties. If the Supabase secret is unset the route
-returns 404 rather than serving without a check.
-
-The sheet is a copy, not the source of truth. Editing a cell changes nothing in
-the database and the next refresh overwrites it. The Notes column is the
-exception: it is keyed on registration number and preserved across refreshes.
+Set the same value in three places: `supabase secrets set EXPORT_TOKEN=...`
+and the Script properties of both Apps Script projects. If the Supabase secret
+is unset the route returns 404 rather than serving without a check. Each
+script's `diagnose` function reports which of the three is out of step.
 
 ## Before changing anything
 
