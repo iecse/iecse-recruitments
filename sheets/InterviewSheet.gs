@@ -63,19 +63,15 @@ var SCORE_VALUES = ["1", "2", "3", "4", "5"];
 var DECISION_VALUES = ["Yes", "No", "Review"];
 
 /**
- * Who a candidate is scheduled with, decided before the interview happens.
- * Kept separate from Interviewer, which is filled in after: the two answer
- * different questions and a slot can be assigned to someone other than who
- * actually ends up taking it.
- *
- * Placed leftmost rather than folded into EDITABLE_HEADERS with the rest, so
- * it is the first thing visible scanning down the sheet without scrolling,
- * which is the point of it: this is what you check to know whose queue a row
- * is in before you have opened anything else about them.
+ * Who is taking this candidate's interview, assigned or actual: one field,
+ * not two. Placed leftmost so it is the first thing visible scanning down the
+ * sheet without scrolling, which is the point of it: this is what you check
+ * to know whose queue a row is in before you have opened anything else about
+ * them.
  */
-var ASSIGNED_HEADER = "Assigned to";
+var INTERVIEWER_HEADER = "Interviewer";
 
-var EDITABLE_HEADERS = [ASSIGNED_HEADER, "Interviewer"].concat(SCORE_DOMAINS).concat(["Decision"]);
+var EDITABLE_HEADERS = [INTERVIEWER_HEADER].concat(SCORE_DOMAINS).concat(["Decision"]);
 var TOTAL_HEADER = "Total";
 
 function onOpen() {
@@ -141,11 +137,11 @@ function writeInterviewTab(book, rows) {
   sheet.clear();
   sheet.getRange(1, 1, sheet.getMaxRows(), sheet.getMaxColumns()).clearDataValidations();
 
-  // EDITABLE_HEADERS is Assigned to, Interviewer, the five scores, Decision,
-  // in that order, but only the middle stretch sits together on the sheet.
-  // Assigned to goes leftmost of everything, and Total is inserted between
-  // the scores and Decision, so neither is part of this concat directly.
-  var headers = [ASSIGNED_HEADER]
+  // EDITABLE_HEADERS is Interviewer, the five scores, Decision, in that order,
+  // but Interviewer sits leftmost of everything rather than with the rest, and
+  // Total is inserted between the scores and Decision, so neither is part of
+  // this concat directly.
+  var headers = [INTERVIEWER_HEADER]
     .concat(INFO_COLUMNS.map(function (c) { return c.header; }))
     .concat(EDITABLE_HEADERS.slice(1, -1))
     .concat([TOTAL_HEADER])
@@ -159,7 +155,7 @@ function writeInterviewTab(book, rows) {
 
   rows.forEach(function (row) {
     var prior = saved[row.registration_number] || {};
-    var line = [prior[ASSIGNED_HEADER] || ""];
+    var line = [prior[INTERVIEWER_HEADER] || ""];
 
     line = line.concat(INFO_COLUMNS.map(function (c) {
       var v = row[c.key];
@@ -168,7 +164,6 @@ function writeInterviewTab(book, rows) {
       return String(v);
     }));
 
-    line.push(prior["Interviewer"] || "");
     SCORE_DOMAINS.forEach(function (d) { line.push(prior[d] || ""); });
     line.push("");                          // Total: a formula, filled in below
     line.push(prior["Decision"] || "");
@@ -202,9 +197,8 @@ function writeInterviewTab(book, rows) {
   sheet.setFrozenRows(1);
   sheet.setFrozenColumns(4);
 
-  sheet.setColumnWidth(headers.indexOf(ASSIGNED_HEADER) + 1, 140);
+  sheet.setColumnWidth(headers.indexOf(INTERVIEWER_HEADER) + 1, 140);
   INFO_COLUMNS.forEach(function (c) { sheet.setColumnWidth(headers.indexOf(c.header) + 1, c.width); });
-  sheet.setColumnWidth(headers.indexOf("Interviewer") + 1, 140);
   SCORE_DOMAINS.forEach(function (d) { sheet.setColumnWidth(headers.indexOf(d) + 1, 90); });
   sheet.setColumnWidth(totalCol, 70);
   sheet.setColumnWidth(headers.indexOf("Decision") + 1, 100);

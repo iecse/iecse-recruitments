@@ -115,14 +115,13 @@ It only pulls Management Committee applicants whose payment is already
 `verified`, so mark payment first on the applications sheet; someone will not
 appear here until that is done.
 
-The leftmost column is Assigned to: who a candidate is scheduled with, filled
-in before the interview happens. Each row also has an Interviewer field for
-who actually took it, a 1-5 dropdown for Technical, AIML, Dev, Design and
-Publicity, a Total the sheet adds up itself, and a Yes (green), No (red) or
-Review (yellow) decision. All of that is preserved across refreshes the same
-way Notes is on the applications sheet, keyed on registration number, so a
-scheduled refresh mid-interview-season does not erase an assignment or a
-score.
+The leftmost column is Interviewer, so it is the first thing visible scanning
+down the sheet. Each row also has a 1-5 dropdown for Technical, AIML, Dev,
+Design and Publicity, a Total the sheet adds up itself, and a Yes (green), No
+(red) or Review (yellow) decision. All of that is preserved across refreshes
+the same way Notes is on the applications sheet, keyed on registration number,
+so a scheduled refresh mid-interview-season does not erase who is assigned or
+a score already entered.
 
 None of it writes back to the database. There is no column there for an
 interview outcome, only for whether an interview happened, so this sheet is
